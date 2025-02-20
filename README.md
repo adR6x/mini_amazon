@@ -136,4 +136,4 @@ user passwords for your website in CSV files for loading sample
 database).  This file is NOT tracked by `git` and it was automatically
 generated when you first ran `./install.sh`.  Don't check it into
 `git` because your credentials would be exposed to everybody on GitLab
-if you are not careful.
+if you are not careful. Change
