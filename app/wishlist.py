@@ -5,6 +5,7 @@ import datetime
 
 from .models.product import Product
 from .models.purchase import Purchase
+from flask import redirect, url_for
 from .models.wishlist import WishlistItem
 
 from flask import Blueprint
@@ -20,3 +21,8 @@ def wishlist():
         return jsonify([item.__dict__ for item in items])
     else:
        return jsonfiy({}), 404
+
+@bp.route('/wishlist/add/<int:product_id>', methods=['POST'])
+def wishlist_add(product_id):
+    WishlistItem.add_to_wishlist(current_user.id, product_id)
+    return redirect(url_for('wishlist.wishlist'))

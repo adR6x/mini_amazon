@@ -30,3 +30,12 @@ ORDER BY time_added DESC
                               uid=uid,
                               since=since)
         return [WishlistItem(*row) for row in rows]
+
+    @staticmethod
+    def add_to_wishlist(uid, pid):
+        app.db.execute('''
+INSERT INTO Wishes(uid, pid, time_added)
+VALUES(:uid, :pid, NOW())
+''',
+                       uid=uid,
+                       pid=pid)
