@@ -1,7 +1,7 @@
 from flask_login import current_user
 import datetime
 from flask import jsonify
-from flask import redirect, url_for
+from flask import render_template, redirect, url_for
 
 from .models.wishlist import WishlistItem
 
