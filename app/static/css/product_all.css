@@ -1,0 +1,177 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #f9f9f9;
+}
+
+.container {
+    display: flex;
+    padding: 20px;
+    max-width: 1200px;
+    margin: 20px auto;
+    background: white;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+.sidebar {
+    width: 200px;
+    background: white;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.sidebar h3 {
+    margin-top: 0;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar li {
+    padding: 10px 0;
+}
+
+.sidebar li a {
+    text-decoration: none;
+    font-weight: bold;
+    color: black;
+}
+
+.sidebar li a:hover {
+    text-decoration: underline;
+}
+
+main {
+    flex-grow: 1;
+    padding: 20px;
+}
+
+.search-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.search-bar input {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.search-bar button {
+    padding: 10px 15px;
+    background: #ccc;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.filters button {
+    padding: 4px 6px;
+    font-size: 0.9em;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    border-radius: 5px;
+    background: #f0f0f0;
+}
+
+.product-list h2 {
+    display: inline-block;
+    margin-left: auto;
+    margin-bottom: 15px;
+    color: black;
+}
+
+.product {
+    display: flex;
+    gap: 15px;
+    background: white;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.product img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 5px;
+}
+
+.product-info {
+    flex-grow: 1;
+    text-align: left;
+}
+
+.product-title {
+    font-size: 1.1em;
+    font-weight: bold;
+    margin: 0;
+    color: black;
+}
+
+.product-description {
+    font-size: 0.9em;
+    color: #555;
+    margin: 5px 0;
+}
+
+.price {
+    font-weight: bold;
+    font-size: 1.1em;
+    margin: 5px 0;
+    color: green;
+}
+
+.unit-price {
+    color: gray;
+    font-size: 0.9em;
+}
+
+.rating {
+    color: orange;
+    font-size: 0.9em;
+    margin: 5px 0;
+}
+
+.cart-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: flex-start;
+}
+
+.cart-actions input {
+    width: 40px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.add-to-cart {
+    background: green;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.add-to-cart:hover {
+    background: #218838;
+}
