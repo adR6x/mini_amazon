@@ -1,1 +1,2 @@
-0,icecream@tastes.good,pbkdf2:sha256:260000$1GvmeoAkcWb89TyU$5f711eafb243c1c1a884715dd9bd6d185f29ccd3dab59ad19cc201a7260091cb,Joey,Shmoey
+user_id,email,password_hash,full_name,address,balance,created_at,updated_at
+1,icecream@tastes.good,pbkdf2:sha256:260000$1GvmeoAkcWb89TyU$5f711eafb243c1c1a884715dd9bd6d185f29ccd3dab59ad19cc201a7260091cb,Joey Shmoey,"123 Ice Cream St, Flavor Town",100.0,2024-03-19 12:00:00,2024-03-19 12:00:00
