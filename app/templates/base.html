@@ -4,63 +4,72 @@
 <head>
   <title>Mini Amazon</title>
   <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
-  <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+  <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet">
   <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/example.css') }}">
   <style>
     body {
         font-family: "Lato", sans-serif;
     }
-
-    .main-head {
-        height: 150px;
-        background: #FFF;
+    .navbar {
+        background-color: #93c5fd;
+        display: flex;
+        flex-direction: column;
+        align-items: left;
     }
-
-    .sidenav {
-        height: 100%;
-        background-color: #000;
-        overflow-x: hidden;
-        padding-top: 20px;
+    .navbar-brand {
+        font-size: 24px;
+        font-weight: bold;
     }
-
-    .main {
-        padding: 0px 10px;
+    .nav-container {
+        display: flex;
+        justify-content: left;
+        width: 100%;
     }
-
-    .login-main-text {
-        margin-top: 20%;
-        padding: 60px;
-        color: #fff;
+    .navbar-nav {
+        display: flex;
+        flex-direction: row;
+        gap: 15px;
     }
-
-    .login-main-text h2 {
-        font-weight: 300;
+    .nav-link {
+        color: black !important;
+        padding: 10px 15px;
+        transition: color 0.3s, background-color 0.3s;
     }
-
-    .btn-black {
-        background-color: #000 !important;
-        color: #fff;
+    .nav-link:hover {
+        background-color: #ffcccb;
+        color: white !important;
+        border-radius: 5px;
+    }
+    .nav-link.active {
+        color: red !important;
+        font-weight: bold;
     }
   </style>
 </head>
 
 <body>
-  <div class="sidenav">
-    {% block msg %}
-      <h1 style="color:aliceblue">Welcome to CompSci 316 Mini Amazon!</h1>
-      <div style="color: aliceblue; text-align: right; margin-bottom: 25px">
-        {% if current_user.is_authenticated %}
-          Hello {{current_user.firstname}}! <a href="{{ url_for('users.logout') }}" type="button" class="btn btn-light">Log out</a>
-        {% else %}
-          <a href="{{ url_for('users.login') }}" type="button" class="btn btn-light">Log in</a>
-        {% endif %}
-      </div>
-    {% endblock %}
-  </div>
-  <div class="main">
+  <nav class="navbar navbar-light">
+    <a class="navbar-brand" href="#">Little Amazon</a>
+    <div class="nav-container">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('index.index') }}">Products</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('index.index') }}">Cart</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('index.index') }}">Orders</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('index.index') }}">Inventory</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('index.index') }}">Profile</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('index.index') }}">Review</a></li>
+      </ul>
+      {% if current_user.is_authenticated %}
+          <div class="text-center">Hello {{current_user.firstname}}! <a href="{{ url_for('users.logout') }}" type="button" class="btn btn-light">Log out</a></div>
+      {% else %}
+          <div class="text-center"><a href="{{ url_for('users.login') }}" type="button" class="btn btn-light">Log in</a></div>
+      {% endif %}
+    </div>
+  </nav>
+
+  <div class="container mt-3">
     {% block content %}{% endblock %}
   </div>
 </body>
-
 </html>
