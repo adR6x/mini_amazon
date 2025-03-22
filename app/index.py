@@ -12,7 +12,7 @@ bp = Blueprint('index', __name__)
 @bp.route('/')
 def index():
     # get all available products for sale:
-    products = Product.get_all(True)
+    products = Product.get_all_top5(True)
     # find the products current user has bought:
     if current_user.is_authenticated:
         purchases = Purchase.get_all_by_uid_since(

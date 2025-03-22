@@ -8,7 +8,17 @@ from .models.purchase import Purchase
 from flask import Blueprint
 bp = Blueprint('product', __name__)
 
-
 @bp.route('/product_all', methods=['GET', 'POST'])
 def product_all():
-    return render_template('product_all.html')
+    # get all available products for sale:
+    products = Product.get_all_top5(True)
+    # find the products current user has bought:
+    if current_user.is_authenticated:
+        purchases = Purchase.get_all_by_uid_since(
+            current_user.id, datetime.datetime(1980, 9, 14, 0, 0, 0))
+    else:
+        purchases = None
+    # render the page by adding information to the index.html file
+    return render_template('product_all.html',
+                           avail_products=products,
+                           purchase_history=purchases)

@@ -28,32 +28,21 @@
                 </div>
                 <section class="product-list">
                     <h2>All Products</h2>
-                    <div class="product">
-                        <img src="product-image.jpg" alt="Product Image">
-                        <div class="product-info">
-                            <h3 class="product-title">Simply Organic Ground Cumin Seed</h3>
-                            <p class="product-description">2.31 Ounce Glass Jar, Rich, Warm, Complex Earthy Spice Flavor, Certified Organic, Kosher</p>
-                            <p class="price">$19.22 <span class="unit-price">($8.32/Ounce)</span></p>
-                            <p class="rating">★★★★★ 487</p>
-                            <div class="cart-actions">
-                                <input type="number" value="1">
-                                <button class="add-to-cart">Add to Cart</button>
+                    {% for product in avail_products%}
+                        <div class="product">
+                            <img src="product-image.jpg" alt="Product Image">
+                            <div class="product-info">
+                                <h3 class="product-title">{{product.name}}</h3>
+                                <p class="product-description">{{product.description}}</p>
+                                <p class="price">${{product.price}}<span class="unit-price">($?.??/Ounce)</span></p>
+                                <p class="rating">★★★★★ 487</p>
+                                <div class="cart-actions">
+                                    <input type="number" value="1">
+                                    <button class="add-to-cart">Add to Cart</button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="product">
-                        <img src="product-image.jpg" alt="Product Image">
-                        <div class="product-info">
-                            <h3 class="product-title">Amazon Basics 4-Pack CR2032 Lithium Coin Cell Battery</h3>
-                            <p class="product-description">Compatible with AirTag, 3 Volt, Long Lasting Power, Mercury-Free</p>
-                            <p class="price">$5.46 <span class="unit-price">($1.37/Pack)</span></p>
-                            <p class="rating">★★★★★ 9200</p>
-                            <div class="cart-actions">
-                                <input type="number" value="1">
-                                <button class="add-to-cart">Add to Cart</button>
-                            </div>
-                        </div>
-                    </div>
+                    {% endfor %}
                 </section>
             </main>
         </div>
