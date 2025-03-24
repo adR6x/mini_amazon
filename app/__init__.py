@@ -17,8 +17,14 @@ def create_app():
 
     from .index import bp as index_bp
     app.register_blueprint(index_bp)
-
+    
+    from .wishlist import bp as wishlist_bp
+    app.register_blueprint(wishlist_bp)
+    
     from .users import bp as user_bp
     app.register_blueprint(user_bp)
+
+    from .review import bp as review_bp
+    app.register_blueprint(review_bp)
 
     return app
