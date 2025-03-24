@@ -1,2 +1,7 @@
-0,0,0,Smartphone,Latest model,url1,699.99
-1,0,1,Sci-fi Book,Bestseller,url2,15.99
+0,0,0,Smartphone X,"Latest flagship smartphone","https://example.com/smartphone.jpg",799.99
+1,0,0,Laptop Pro,"High-performance laptop for professionals","https://example.com/laptop.jpg",1299.99
+2,1,1,Fantasy Novel,"Epic fantasy book with dragons","https://example.com/fantasy.jpg",19.99
+3,1,1,Science Book,"Informative science book","https://example.com/science.jpg",25.50
+4,0,2,Action Figure,"Superhero action figure","https://example.com/figure.jpg",14.99
+5,1,2,Puzzle Cube,"3D brain teaser puzzle","https://example.com/puzzle.jpg",9.99
+6,0,0,Wireless Earbuds,"Noise-cancelling earbuds","https://example.com/earbuds.jpg",99.00
