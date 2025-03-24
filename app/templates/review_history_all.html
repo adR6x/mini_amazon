@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<br><br>
+
+<h2>Reviews:</h2>
+<!-- Bootstrap Nav Tabs -->
+<ul class="nav nav-tabs container" id="reviewTabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link {% if review_type == 'product' %}active{% endif %}" id="product-tab" data-bs-toggle="tab" data-bs-target="#product" type="button" role="tab">Product Reviews</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link {% if review_type == 'seller' %}active{% endif %}" id="seller-tab" data-bs-toggle="tab" data-bs-target="#seller" type="button" role="tab">Seller Reviews</button>
+  </li>
+</ul>
+
+<!-- Tab Content -->
+<div class="tab-content container border border-top-0 p-3" id="reviewTabsContent">
+
+  <!-- Product Reviews Tab -->
+  <div class="tab-pane fade {% if review_type == 'product' %}show active{% endif %}" id="product" role="tabpanel">
+    <table class="table table-hover table-bordered">
+      <thead>
+        <tr>
+          <th>Product Name</th>
+          <th>Date</th>
+          <th>Rating (/5)</th>
+          <th>Seller</th>
+          <th>Review</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in product_reviews %}
+        <tr>
+          <td>{{ r.product_name }}</td>
+          <td>{{ r.created_at.strftime('%-m/%-d/%Y') }}</td>
+          <td>{{ r.rating }}</td>
+          <td>{{ r.seller_name }}</td>
+          <td>{{ r.review_text }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Seller Reviews Tab -->
+  <div class="tab-pane fade {% if review_type == 'seller' %}show active{% endif %}" id="seller" role="tabpanel">
+    <table class="table table-hover table-bordered">
+      <thead>
+        <tr>
+          <th>Seller</th>
+          <th>Date</th>
+          <th>Rating (/5)</th>
+          <th>Review</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in seller_reviews %}
+        <tr>
+          <td>{{ r.seller_name }}</td>
+          <td>{{ r.created_at.strftime('%-m/%-d/%Y') }}</td>
+          <td>{{ r.rating }}</td>
+          <td>{{ r.review_text }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}

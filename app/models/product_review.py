@@ -2,7 +2,8 @@ from flask import current_app as app
 from datetime import datetime
 
 class ProductReview:
-    def __init__(self, review_id, product_id, reviewer_id, rating, review_text, image_url, created_at, updated_at):
+    def __init__(self, review_id, product_id, reviewer_id, rating, review_text, image_url,
+                 created_at, updated_at, product_name=None, seller_name=None):
         self.review_id = review_id
         self.product_id = product_id
         self.reviewer_id = reviewer_id
@@ -11,22 +12,34 @@ class ProductReview:
         self.image_url = image_url
         self.created_at = created_at
         self.updated_at = updated_at
+        self.product_name = product_name
+        self.seller_name = seller_name
 
     @staticmethod
     def get_by_product(product_id):
         rows = app.db.execute('''
-            SELECT review_id, product_id, reviewer_id, rating, review_text, image_url, created_at, updated_at
-            FROM Product_Reviews
-            WHERE product_id = :product_id
+            SELECT pr.review_id, pr.product_id, pr.reviewer_id, pr.rating,
+                   pr.review_text, pr.image_url, pr.created_at, pr.updated_at,
+                   p.name AS product_name,
+                   u.firstname || ' ' || u.lastname AS seller_name
+            FROM Product_Reviews pr
+            JOIN Products p ON pr.product_id = p.product_id
+            JOIN Users u ON p.seller_id = u.id
+            WHERE pr.product_id = :product_id
         ''', product_id=product_id)
         return [ProductReview(*row) for row in rows]
 
     @staticmethod
     def get_by_user(user_id):
         rows = app.db.execute('''
-            SELECT review_id, product_id, reviewer_id, rating, review_text, image_url, created_at, updated_at
-            FROM Product_Reviews
-            WHERE reviewer_id = :user_id
+            SELECT pr.review_id, pr.product_id, pr.reviewer_id, pr.rating,
+                   pr.review_text, pr.image_url, pr.created_at, pr.updated_at,
+                   p.name AS product_name,
+                   u.firstname || ' ' || u.lastname AS seller_name
+            FROM Product_Reviews pr
+            JOIN Products p ON pr.product_id = p.product_id
+            JOIN Users u ON p.seller_id = u.id
+            WHERE pr.reviewer_id = :user_id
         ''', user_id=user_id)
         return [ProductReview(*row) for row in rows]
 
