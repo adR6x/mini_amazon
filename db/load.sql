@@ -1,3 +1,8 @@
+DELETE FROM Purchases;
+DELETE FROM Products;
+DELETE FROM Categories;
+DELETE FROM Users;
+
 \COPY Users FROM 'Users.csv' WITH DELIMITER ',' NULL '' CSV
 -- since id is auto-generated; we need the next command to adjust the counter
 -- for auto-generation so next INSERT will not clash with ids loaded above:
