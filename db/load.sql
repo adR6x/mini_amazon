@@ -5,17 +5,26 @@ SELECT pg_catalog.setval('public.users_id_seq',
                          (SELECT MAX(id)+1 FROM Users),
                          false);
 
-\COPY Products FROM 'Products.csv' WITH DELIMITER ',' NULL '' CSV
-SELECT pg_catalog.setval('public.products_id_seq',
-                         (SELECT MAX(id)+1 FROM Products),
-                         false);
+-- Load categories first (satisfy FK constraints)
+\COPY Categories FROM 'Categories.csv' WITH DELIMITER ',' NULL '' CSV;
 
-\COPY Purchases FROM 'Purchases.csv' WITH DELIMITER ',' NULL '' CSV
-SELECT pg_catalog.setval('public.purchases_id_seq',
-                         (SELECT MAX(id)+1 FROM Purchases),
-                         false);
+-- Load products next
+\COPY Products FROM 'Products.csv' WITH DELIMITER ',' NULL '' CSV;
 
-\COPY Wishes FROM 'Wishes.csv' WITH DELIMITER ',' NULL '' CSV
-SELECT pg_catalog.setval('public.wishes_id_seq',
-                         (SELECT MAX(id)+1 FROM Wishes),
-                         false);
+-- No need to reset identity sequence manually if using GENERATED AS IDENTITY
+
+
+-- \COPY Products FROM 'Products.csv' WITH DELIMITER ',' NULL '' CSV
+-- SELECT pg_catalog.setval('public.products_id_seq',
+--                          (SELECT MAX(product_id)+1 FROM Products),
+--                          false);
+
+-- \COPY Purchases FROM 'Purchases.csv' WITH DELIMITER ',' NULL '' CSV
+-- SELECT pg_catalog.setval('public.purchases_id_seq',
+--                          (SELECT MAX(id)+1 FROM Purchases),
+--                          false);
+
+-- \COPY Wishes FROM 'Wishes.csv' WITH DELIMITER ',' NULL '' CSV
+-- SELECT pg_catalog.setval('public.wishes_id_seq',
+--                          (SELECT MAX(id)+1 FROM Wishes),
+--                          false);
