@@ -1,8 +1,10 @@
 from flask import current_app as app
 from datetime import datetime
 
+from flask import current_app as app
+
 class SellerReview:
-    def __init__(self, seller_review_id, seller_id, reviewer_id, rating, review_text, image_url, created_at, updated_at):
+    def __init__(self, seller_review_id, seller_id, reviewer_id, rating, review_text, image_url, created_at, updated_at, seller_name=None):
         self.seller_review_id = seller_review_id
         self.seller_id = seller_id
         self.reviewer_id = reviewer_id
@@ -11,22 +13,29 @@ class SellerReview:
         self.image_url = image_url
         self.created_at = created_at
         self.updated_at = updated_at
+        self.seller_name = seller_name
 
     @staticmethod
     def get_by_seller(seller_id):
         rows = app.db.execute('''
-            SELECT seller_review_id, seller_id, reviewer_id, rating, review_text, image_url, created_at, updated_at
-            FROM Seller_Reviews
-            WHERE seller_id = :seller_id
+            SELECT sr.seller_review_id, sr.seller_id, sr.reviewer_id, sr.rating,
+                   sr.review_text, sr.image_url, sr.created_at, sr.updated_at,
+                   u.firstname || ' ' || u.lastname AS seller_name
+            FROM Seller_Reviews sr
+            JOIN Users u ON sr.seller_id = u.id
+            WHERE sr.seller_id = :seller_id
         ''', seller_id=seller_id)
         return [SellerReview(*row) for row in rows]
 
     @staticmethod
     def get_by_user(user_id):
         rows = app.db.execute('''
-            SELECT seller_review_id, seller_id, reviewer_id, rating, review_text, image_url, created_at, updated_at
-            FROM Seller_Reviews
-            WHERE reviewer_id = :user_id
+            SELECT sr.seller_review_id, sr.seller_id, sr.reviewer_id, sr.rating,
+                   sr.review_text, sr.image_url, sr.created_at, sr.updated_at,
+                   u.firstname || ' ' || u.lastname AS seller_name
+            FROM Seller_Reviews sr
+            JOIN Users u ON sr.seller_id = u.id
+            WHERE sr.reviewer_id = :user_id
         ''', user_id=user_id)
         return [SellerReview(*row) for row in rows]
 

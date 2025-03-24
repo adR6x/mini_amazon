@@ -19,10 +19,6 @@ def review_history_all():
     product_reviews = ProductReview.get_by_user(current_user.id)
     seller_reviews = SellerReview.get_by_user(current_user.id)
 
-    print(current_user.id)
-    print(seller_reviews)
-    print(product_reviews)
-
     return render_template('review_history_all.html',
                            review_type=review_type,
                            product_reviews=product_reviews,
