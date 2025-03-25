@@ -1,4 +1,3 @@
-DELETE FROM Purchases;
 DELETE FROM Products;
 DELETE FROM Categories;
 DELETE FROM Users;
@@ -21,6 +20,8 @@ SELECT pg_catalog.setval('public.users_id_seq',
 \COPY Product_Reviews FROM 'ProductReviews.csv' WITH DELIMITER ',' NULL '' CSV;
 
 \COPY Seller_Reviews FROM 'SellerReviews.csv' WITH DELIMITER ',' NULL '' CSV;
+
+\COPY Inventory FROM 'Inventory.csv' WITH DELIMITER ',' NULL '' CSV;
 
 -- No need to reset identity sequence manually if using GENERATED AS IDENTITY
 
