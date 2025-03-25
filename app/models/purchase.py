@@ -7,6 +7,7 @@ class Purchase:
         self.uid = uid
         self.pid = pid
         self.time_purchased = time_purchased
+    
 
     @staticmethod
     def get(id):
@@ -58,5 +59,30 @@ ORDER BY time_purchased DESC
             }
             for row in rows
         ]
+    
+    @staticmethod
+    def get_orders_summary_by_user(uid):
+        rows = app.db.execute('''
+            SELECT 
+                o.order_id,
+                o.total_amount,
+                COUNT(oi.order_item_id) AS item_count,
+                o.fulfillment_status,
+                o.created_at
+            FROM Orders o
+            JOIN Order_Items oi ON o.order_id = oi.order_id
+            WHERE o.buyer_id = :uid
+            GROUP BY o.order_id, o.total_amount, o.fulfillment_status, o.created_at
+            ORDER BY o.created_at DESC
+        ''', uid=uid)
 
-
+        return [
+            {
+                "order_id": row[0],
+                "total_amount": row[1],
+                "item_count": row[2],
+                "fulfillment_status": row[3],
+                "created_at": row[4]
+            }
+            for row in rows
+        ]

@@ -19,3 +19,12 @@ SELECT pg_catalog.setval('public.purchases_id_seq',
 SELECT pg_catalog.setval('public.purchases_id_seq',
                          (SELECT MAX(id)+1 FROM Wishes),
                          false);
+--\COPY Orders FROM 'Orders.csv' WITH DELIMITER ',' NULL '' CSV
+--SELECT pg_catalog.setval('public.orders_order_id_seq',
+--                         (SELECT MAX(order_id)+1 FROM Orders),
+--                         false);
+
+--\COPY Order_Items FROM 'Order_Items.csv' WITH DELIMITER ',' NULL '' CSV
+--SELECT pg_catalog.setval('public.order_items_order_item_id_seq',
+--                         (SELECT MAX(order_item_id)+1 FROM Order_Items),
+--                         false);

@@ -29,3 +29,4 @@ CREATE TABLE Wishes (
     pid INT NOT NULL REFERENCES Products(id),
     time_added timestamp without time zone NOT NULL DEFAULT (current_timestamp AT TIME ZONE 'UTC')
 );
+

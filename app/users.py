@@ -82,10 +82,12 @@ def logout():
 @login_required
 def purchases():
     # Fetch all purchases for the logged-in user
-    user_purchases = Purchase.get_all_purchases_by_user(current_user.id)
-
-    return render_template('purchases.html', purchases=user_purchases)
-
+    #user_purchases = Purchase.get_all_purchases_by_user(current_user.id)
+    #return render_template('purchases.html', purchases=user_purchases)
+    user_orders = Purchase.get_orders_summary_by_user(current_user.id)
+    return render_template('purchases.html', orders=user_orders)
+    
+    
 
 @bp.route('/account', methods=['GET', 'POST'])
 @login_required
@@ -160,3 +162,4 @@ def public_profile(user_id):
         return redirect(url_for('index'))  # or a 404 page
 
     return render_template('public_profile.html', user=user[0])
+
