@@ -67,3 +67,4 @@ WHERE id = :id
 """,
                               id=id)
         return User(*(rows[0])) if rows else None
+

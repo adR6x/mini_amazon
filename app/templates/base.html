@@ -42,6 +42,22 @@
         background-color: #000 !important;
         color: #fff;
     }
+
+    .nav-links {
+        padding: 10px;
+        text-align: center;
+    }
+
+    .nav-links a {
+        color: white;
+        font-size: 18px;
+        margin: 10px;
+        text-decoration: none;
+    }
+
+    .nav-links a:hover {
+        text-decoration: underline;
+    }
   </style>
 </head>
 
@@ -51,12 +67,21 @@
       <h1 style="color:aliceblue">Welcome to CompSci 316 Mini Amazon!</h1>
       <div style="color: aliceblue; text-align: right; margin-bottom: 25px">
         {% if current_user.is_authenticated %}
-          Hello {{current_user.firstname}}! <a href="{{ url_for('users.logout') }}" type="button" class="btn btn-light">Log out</a>
+          Hello {{current_user.firstname}}! 
+          <a href="{{ url_for('users.logout') }}" type="button" class="btn btn-light">Log out</a>
         {% else %}
           <a href="{{ url_for('users.login') }}" type="button" class="btn btn-light">Log in</a>
         {% endif %}
       </div>
     {% endblock %}
+
+    <div class="nav-links">
+      {% if current_user.is_authenticated %}
+        <a href="{{ url_for('users.purchases') }}">Purchases</a>  <!-- Added Purchases Button -->
+        <a href="{{ url_for('users.account') }}">My account</a>
+      {% endif %}
+    </div>
+
   </div>
   <div class="main">
     {% block content %}{% endblock %}

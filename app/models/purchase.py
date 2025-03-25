@@ -21,12 +21,42 @@ WHERE id = :id
     @staticmethod
     def get_all_by_uid_since(uid, since):
         rows = app.db.execute('''
-SELECT id, uid, pid, time_purchased
-FROM Purchases
-WHERE uid = :uid
+SELECT pu.id AS purchase_id, p.name AS product_name, p.price, pu.time_purchased
+FROM Purchases pu
+JOIN Products p on pu.pid=p.id
+WHERE pu.uid = :uid
 AND time_purchased >= :since
 ORDER BY time_purchased DESC
 ''',
                               uid=uid,
                               since=since)
-        return [Purchase(*row) for row in rows]
+        return [{
+            "purchase_id": row[0],
+            "product_name": row[1],
+            "price": row[2],
+            "time_purchased": row[3]
+        }
+        for row in rows]
+
+    @staticmethod
+    def get_all_purchases_by_user(uid):
+        """Fetch all purchases for a given user, including product details."""
+        rows = app.db.execute('''
+        SELECT pu.id, p.name AS product_name, p.price, pu.time_purchased
+        FROM Purchases pu
+        JOIN Products p ON pu.pid = p.id
+        WHERE pu.uid = :uid
+        ORDER BY pu.time_purchased DESC
+        ''', uid=uid)
+
+        return [
+            {
+                "purchase_id": row[0],
+                "product_name": row[1],
+                "price": row[2],
+                "time_purchased": row[3]
+            }
+            for row in rows
+        ]
+
+
