@@ -33,7 +33,6 @@ class Product:
         rows = app.db.execute('''
 SELECT product_id AS id, name, price, description, image_url, seller_id, category_id
 FROM Products  
-WHERE available = :available  
 ORDER BY RANDOM()  
 LIMIT 5
 ''',

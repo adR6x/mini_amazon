@@ -28,11 +28,11 @@ def product_all():
     # get all available products for sale:
     products = Product.get_all_top5(True)
     # find the products current user has bought:
-    if current_user.is_authenticated:
-        purchases = Purchase.get_all_by_uid_since(
-            current_user.id, datetime.datetime(1980, 9, 14, 0, 0, 0))
-    else:
-        purchases = None
+    # if current_user.is_authenticated:
+    #     purchases = Purchase.get_all_by_uid_since(
+    #         current_user.id, datetime.datetime(1980, 9, 14, 0, 0, 0))
+    # else:
+    #     purchases = None
 
     filter_form = FilterForm()
     # if filter_form.validate_on_submit():
@@ -46,7 +46,7 @@ def product_all():
             
     return render_template('product_all.html',
                            avail_products=products,
-                           purchase_history=purchases,
+                        #    purchase_history=purchases,
                            form=filter_form)
     
 # @bp.route('/product_all/filtered', methods=['GET', 'POST'])
