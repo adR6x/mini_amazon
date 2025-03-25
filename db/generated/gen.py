@@ -21,17 +21,22 @@ def gen_users(num_users):
         for uid in range(num_users):
             if uid % 10 == 0:
                 print(f'{uid}', end=' ', flush=True)
-            profile = fake.profile()
-            email = profile['mail']
-            plain_password = f'pass{uid}'
-            password = generate_password_hash(plain_password)
-            name_components = profile['name'].split(' ')
-            firstname = name_components[0]
-            lastname = name_components[-1]
+            if uid == 0:
+                email = "icecream@tastes.good"
+                password = "pbkdf2:sha256:260000$1GvmeoAkcWb89TyU$5f711eafb243c1c1a884715dd9bd6d185f29ccd3dab59ad19cc201a7260091cb"
+                firstname = "Joey"
+                lastname = "Shmoey"
+            else:
+                profile = fake.profile()
+                email = profile['mail']
+                plain_password = f'pass{uid}'
+                password = generate_password_hash(plain_password)
+                name_components = profile['name'].split(' ')
+                firstname = name_components[0]
+                lastname = name_components[-1]
             writer.writerow([uid, email, password, firstname, lastname])
         print(f'{num_users} generated')
     return
-
 
 def gen_products(num_products):
     available_pids = []
@@ -42,11 +47,13 @@ def gen_products(num_products):
             if pid % 100 == 0:
                 print(f'{pid}', end=' ', flush=True)
             name = fake.sentence(nb_words=4)[:-1]
+            description = fake.paragraph(nb_sentences = 3, variable_nb_sentences=False)[:-1]
             price = f'{str(fake.random_int(max=500))}.{fake.random_int(max=99):02}'
             available = fake.random_element(elements=('true', 'false'))
+            avg_rating = fake.random_int(min=1, max=5)
             if available == 'true':
                 available_pids.append(pid)
-            writer.writerow([pid, name, price, available])
+            writer.writerow([pid, name, description, price, available, avg_rating])
         print(f'{num_products} generated; {len(available_pids)} available')
     return available_pids
 
