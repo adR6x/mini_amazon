@@ -52,7 +52,7 @@
                     <h2>All Products</h2>
                     {% for product in avail_products%}
                         <div class="product">
-                            <img src="product-image.jpg" alt="Product Image">
+                            <img src={{product.image_url}} alt="Product Image">
                             <div class="product-info">
                                 <h3 class="product-title">{{product.name}}</h3>
                                 <p class="product-description">{{product.description}}</p>

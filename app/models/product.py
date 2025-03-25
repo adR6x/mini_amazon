@@ -1,4 +1,23 @@
 from flask import current_app as app
+import requests
+from bs4 import BeautifulSoup
+
+def get_bing_square_image(query):
+    search_url = f"https://www.bing.com/images/search?q={query}&qft=+filterui:imagesize-custom_200_200&form=HDRSC2"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
+    }
+    
+    response = requests.get(search_url, headers=headers)
+    if response.status_code != 200:
+        return "Failed to fetch results"
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    img_tags = soup.select("img.mimg")
+
+    if img_tags:
+        return img_tags[0]["src"]
+    return "No image found"
 
 class Product:
     def __init__(self, id, name, price, description=None, image_url=None, seller_id=None, category_id=None):
@@ -37,8 +56,19 @@ ORDER BY RANDOM()
 LIMIT 5
 ''',
                              available=available)
-        return [Product(*row) for row in rows]
-    
+        return [
+            Product(
+                row[0],  # product_id -> index 0
+                row[1],  # name -> index 1
+                row[2],  # price -> index 2
+                row[3],  # description -> index 3
+                get_bing_square_image(row[1]),  # image_url from Bing, using name (index 1)
+                row[5],  # seller_id -> index 5
+                row[6]   # category_id -> index 6
+            )
+        for row in rows
+        ]
+        
     @staticmethod
     def get_filtered_top5(review, min_price, max_price, available=True):
         rows = app.db.execute('''
@@ -54,3 +84,22 @@ LIMIT 5;
                              min_price=min_price, max_price=max_price
                              )
         return [Product(*row) for row in rows]
+    
+
+def get_bing_square_image(query):
+    search_url = f"https://www.bing.com/images/search?q={query}&qft=+filterui:imagesize-custom_200_200&form=HDRSC2"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
+    }
+    
+    response = requests.get(search_url, headers=headers)
+    if response.status_code != 200:
+        return "Failed to fetch results"
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    img_tags = soup.select("img.mimg")
+
+    if img_tags:
+        return img_tags[0]["src"]
+    return "No image found"
+    
