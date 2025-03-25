@@ -50,9 +50,10 @@ def gen_products(num_products):
             description = fake.paragraph(nb_sentences = 3, variable_nb_sentences=False)[:-1]
             price = f'{str(fake.random_int(max=500))}.{fake.random_int(max=99):02}'
             available = fake.random_element(elements=('true', 'false'))
+            avg_rating = fake.random_int(min=1, max=5)
             if available == 'true':
                 available_pids.append(pid)
-            writer.writerow([pid, name, description, price, available])
+            writer.writerow([pid, name, description, price, available, avg_rating])
         print(f'{num_products} generated; {len(available_pids)} available')
     return available_pids
 

@@ -14,7 +14,8 @@ CREATE TABLE Products (
     name VARCHAR(255) UNIQUE NOT NULL,
     description VARCHAR(255) NOT NULL,
     price DECIMAL(12,2) NOT NULL,
-    available BOOLEAN DEFAULT TRUE
+    available BOOLEAN DEFAULT TRUE,
+    avg_review INTEGER CHECK (avg_review BETWEEN 1 AND 5)
 );
 
 CREATE TABLE Purchases (
