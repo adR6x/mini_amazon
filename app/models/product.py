@@ -82,17 +82,36 @@ LIMIT :most_exp;
                              )
         return [Product(*row) for row in rows]
         
-#     @staticmethod
-#     # For now only 
-#     def get_filtered_top5(review, min_price, max_price):
-#         rows = app.db.execute('''
-# SELECT product_id AS id, name, price, description, image_url, seller_id, category_id
-# FROM Products  
-# WHERE price BETWEEN :min_price AND :max_price  
-# ORDER BY avg_review ASC, RANDOM()  
-# LIMIT 5;
-# ''',
-#                              available=available, review=review, 
-#                              min_price=min_price, max_price=max_price
-#                              )
-#         return [Product(*row) for row in rows]
+    @staticmethod
+    def get_filtered_all(review, min_price, max_price, most_exp):
+        rows = app.db.execute('''
+SELECT p.product_id, p.name, p.price, p.description, p.image_url, p.seller_id, p.category_id
+FROM products p LEFT JOIN product_reviews pr ON p.product_id = pr.product_id
+WHERE price BETWEEN :min_price AND :max_price 
+GROUP BY p.product_id, p.name, p.price, p.description, p.image_url
+HAVING AVG(pr.rating) >= :review
+ORDER BY p.price DESC
+LIMIT :most_exp
+''',
+                            review=review,
+                            min_price=min_price, max_price=max_price,
+                            most_exp=most_exp
+                            )
+        return [Product(*row) for row in rows]
+
+
+class Category:
+    def __init__(self, id, name, description=None):
+        self.id = id
+        self.name = name
+        self.description = description
+        
+    @staticmethod
+    def get_unique():
+        rows = app.db.execute('''
+SELECT category_id, name, description
+FROM categories
+ORDER BY name ASC
+        ''')
+        return [Category(*row) for row in rows]
+    

@@ -5,7 +5,7 @@ from wtforms import SelectField, SubmitField, IntegerField, FloatField
 from wtforms.validators import DataRequired, NumberRange, Optional
 import datetime
 
-from .models.product import Product
+from .models.product import Product, Category
 from .models.purchase import Purchase
 
 from flask import Blueprint
@@ -24,51 +24,69 @@ class FilterForm(FlaskForm):
     submit = SubmitField("Apply Filters")
 
 
-@bp.route('/product_all', methods=['GET', 'POST'])
+@bp.route('/product_all', methods=['GET','POST'])
 def product_all():
+    
+    ## Catagories
+    unique_cat = Category.get_unique()
+
+    products = Product.get_all_rnd5()        
+    page_heading="All Products"
+    
     filter_form = FilterForm()
     if filter_form.validate_on_submit():
-               
-        return redirect(url_for('product.product_filtered',
-                                # review=filter_form.review.data, 
-                                # min_price=filter_form.min_price.data, 
-                                # max_price=filter_form.max_price.data,
-                                most_exp=filter_form.most_exp.data))
-    
-    products = Product.get_all_rnd5()        
+        review=filter_form.review.data 
+        min_price=filter_form.min_price.data
+        max_price=filter_form.max_price.data
+        most_exp=filter_form.most_exp.data
+        
+        if all(v is not None for v in [review, min_price, max_price, most_exp]):
+            products = Product.get_filtered_all(review, min_price, max_price, most_exp)
+
+        elif most_exp is not None:
+            products = Product.get_filtered_top_exp(most_exp)
+        
+        else:
+            products = Product.get_all_rnd5()
+        
     return render_template('product_all.html',
                            avail_products=products,
-                        #    purchase_history=purchases,
-                           form=filter_form)
+                           br_category=unique_cat,
+                           form=filter_form,
+                           page_heading=page_heading)
     
-@bp.route('/product_all/filtered', methods=['GET', 'POST'])
-def product_filtered():
-    filter_form = FilterForm()
-    
-    if request.method == "GET":
-        # Extract filter parameters from query string
-        # review = request.args.get("review", type=int)
-        # min_price = request.args.get("min_price", type=float)
-        # max_price = request.args.get("max_price", type=float)
-        most_exp= request.args.get("most_exp", type=int)
-        if most_exp is not None:
-            products = Product.get_filtered_top_exp(most_exp)
-        else:
-            products = Product.get_all_rnd5()  
-        # return jsonify({"review": review, "min_price": min_price, "max_price": max_price})
 
-    elif request.method == "POST":
+@bp.route('/product/category', methods=['GET','POST'])
+def by_category():
+    
+    category_id = request.args.get('category_id')
+    category_name = request.args.get('category_name')
+    
+    ## Catagories
+    unique_cat = Category.get_unique()
+
+    products = Product.get_all_rnd5()
+    
+    page_heading="Category: "+category_name        
+    
+    filter_form = FilterForm()
+    if filter_form.validate_on_submit():
+        review=filter_form.review.data 
+        min_price=filter_form.min_price.data
+        max_price=filter_form.max_price.data
+        most_exp=filter_form.most_exp.data
         
+        if all(v is not None for v in [review, min_price, max_price, most_exp]):
+            products = Product.get_filtered_all(review, min_price, max_price, most_exp)
+
+        elif most_exp is not None:
+            products = Product.get_filtered_top_exp(most_exp)
         
-        if filter_form.validate_on_submit():
-                    
-            return redirect(url_for('product.product_filtered',
-                                    review=filter_form.review.data, 
-                                    min_price=filter_form.min_price.data, 
-                                    max_price=filter_form.max_price.data,
-                                    most_exp=filter_form.most_exp.data))
-            
+        else:
+            products = Product.get_all_rnd5()
+        
     return render_template('product_all.html',
-                        avail_products=products,
-                    #    purchase_history=purchases,
-                        form=filter_form)        
+                           avail_products=products,
+                           br_category=unique_cat,
+                           form=filter_form,
+                            page_heading=page_heading)    

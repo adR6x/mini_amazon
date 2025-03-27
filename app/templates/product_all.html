@@ -11,11 +11,9 @@
     <aside class="sidebar">
       <h3>Browse</h3>
       <ul>
-        <li><a href="#">Category 1</a></li>
-        <li><a href="#">Category 2</a></li>
-        <li><a href="#">Category 3</a></li>
-        <li><a href="#">Category 4</a></li>
-        <li><a href="#">Category 5</a></li>
+        {% for category in br_category %}
+        <li><a href="{{ url_for('product.by_category', category_id=category.id, category_name=category.name) }}">{{ category.name }}</a></li>
+        {% endfor %}
       </ul>
       <h3>Filter</h3>
       <form method="POST" class="filter-form">
@@ -53,7 +51,7 @@
         <button>Review ▲▼</button>
       </div>
       <section class="product-list">
-        <h2>All Products</h2>
+        <h2>{{page_heading}}</h2>
         {% for product in avail_products %}
         <div class="product">
           <img src={{product.image_url}} alt="Product Image" />
