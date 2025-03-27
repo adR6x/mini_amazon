@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block content %}
+<br><br>
+
+<h2 class="text-center mb-4">Inventory Item Detail</h2>
+
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-md-10">
+      <div class="card shadow-sm p-4" style="border-radius: 15px;">
+        <div class="row g-4">
+
+          <!-- Left Column: Name + Image -->
+          <div class="col-md-5 d-flex flex-column align-items-center">
+            <h3 class="text-center">{{ item.product_name }}</h3>
+            <div class="mt-3 w-100" style="height: 250px; background-color: #e5e7eb; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+              <span class="text-muted">Product Image Placeholder</span>
+            </div>
+          </div>
+
+          <!-- Right Column: Info + Editable Inputs -->
+          <div class="col-md-7 pt-md-5 mt-md-4" style="padding-top: 60px;">
+            <div class="mb-4 fs-5">
+              <strong>Product ID:</strong> {{ item.product_id }}
+            </div>
+            <div class="mb-4 fs-5">
+              <strong>Quantity Available:</strong>
+              <input type="number" class="form-control mt-2" id="quantity-input"
+                     value="{{ item.quantity_available }}" min="0"
+                     data-product-id="{{ item.product_id }}">
+            </div>
+            <div class="mb-4 fs-5">
+              <strong>Price ($):</strong>
+              <input type="number" step="0.01" class="form-control mt-2" id="price-input"
+                     value="{{ '%.2f' | format(item.price) }}" min="0"
+                     data-product-id="{{ item.product_id }}">
+            </div>
+            <a href="{{ url_for('inventory.inventory_page') }}" class="btn btn-outline-primary mt-4">Back to Inventory</a>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript to handle blur and update -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+      document.getElementById('quantity-input').addEventListener('change', function () {
+        updateInventoryField('quantity_available', this.value, this.dataset.productId);
+      });
+  
+      document.getElementById('price-input').addEventListener('change', function () {
+        updateInventoryField('price', this.value, this.dataset.productId);
+      });
+    });
+  
+    function updateInventoryField(field, value, productId) {
+      fetch(`/inventory/item/${productId}/update`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token() if csrf_token }}'
+        },
+        body: JSON.stringify({ field, value })
+      }).then(response => {
+        if (!response.ok) {
+          alert("Failed to update " + field);
+        }
+      });
+    }
+  </script>
+  
+  
+  
+{% endblock %}

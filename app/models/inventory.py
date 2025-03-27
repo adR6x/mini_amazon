@@ -20,3 +20,17 @@ class Inventory:
         print(rows)
 
         return [Inventory(*row) for row in rows] if rows else []
+
+    @staticmethod
+    def update_field(seller_id, product_id, field, value):
+        if field not in {"quantity_available", "price"}:
+            raise ValueError("Invalid field")
+
+        result = app.db.execute(f"""
+            UPDATE Inventory
+            SET {field} = :value
+            WHERE product_id = :product_id AND seller_id = :seller_id
+            RETURNING product_id
+        """, value=value, product_id=product_id, seller_id=seller_id)
+
+        return result
