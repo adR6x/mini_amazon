@@ -108,34 +108,58 @@ def update_quantity():
         cart_item_id = request.form.get('cart_item_id')
         quantity = request.form.get('quantity')
 
+        # Check if this is an AJAX request
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
         if not cart_item_id or not quantity:
-            flash('Invalid request. Please try again.', 'danger')
-            return redirect(url_for('cart.cart_page'))
+            if is_ajax:
+                return jsonify({'success': False, 'message': 'Invalid request'}), 400
+            else:
+                flash('Invalid request. Please try again.', 'danger')
+                return redirect(url_for('cart.cart_page'))
 
         # Convert to int (validate input)
         try:
             cart_item_id = int(cart_item_id)
             quantity = int(quantity)
             if quantity <= 0:
-                flash('Quantity must be greater than zero.', 'danger')
-                return redirect(url_for('cart.cart_page'))
+                if is_ajax:
+                    return jsonify({'success': False, 'message': 'Quantity must be greater than zero'}), 400
+                else:
+                    flash('Quantity must be greater than zero.', 'danger')
+                    return redirect(url_for('cart.cart_page'))
         except ValueError:
-            flash('Invalid input. Please try again.', 'danger')
-            return redirect(url_for('cart.cart_page'))
+            if is_ajax:
+                return jsonify({'success': False, 'message': 'Invalid input'}), 400
+            else:
+                flash('Invalid input. Please try again.', 'danger')
+                return redirect(url_for('cart.cart_page'))
 
         # Update the quantity
-        if Cart.update_item_quantity(cart_item_id, quantity):
-            flash('Cart updated successfully!', 'success')
-        else:
-            flash('Failed to update cart.', 'danger')
+        success = Cart.update_item_quantity(cart_item_id, quantity)
 
-        return redirect(url_for('cart.cart_page'))
+        if is_ajax:
+            if success:
+                return jsonify({'success': True, 'message': 'Cart updated successfully!'}), 200
+            else:
+                return jsonify({'success': False, 'message': 'Failed to update cart'}), 500
+        else:
+            if success:
+                flash('Cart updated successfully!', 'success')
+            else:
+                flash('Failed to update cart.', 'danger')
+
+            return redirect(url_for('cart.cart_page'))
     except Exception as e:
         import traceback
         print(f"Error in update_quantity: {str(e)}")
         print(traceback.format_exc())
-        flash('An error occurred. Please try again.', 'danger')
-        return redirect(url_for('cart.cart_page'))
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': 'An error occurred'}), 500
+        else:
+            flash('An error occurred. Please try again.', 'danger')
+            return redirect(url_for('cart.cart_page'))
 
 
 @cart.route('/remove_item', methods=['POST'])
@@ -144,27 +168,48 @@ def remove_item():
     try:
         cart_item_id = request.form.get('cart_item_id')
 
+        # Check if this is an AJAX request
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
         if not cart_item_id:
-            flash('Invalid request. Please try again.', 'danger')
-            return redirect(url_for('cart.cart_page'))
+            if is_ajax:
+                return jsonify({'success': False, 'message': 'Invalid request'}), 400
+            else:
+                flash('Invalid request. Please try again.', 'danger')
+                return redirect(url_for('cart.cart_page'))
 
         # Convert to int (validate input)
         try:
             cart_item_id = int(cart_item_id)
         except ValueError:
-            flash('Invalid input. Please try again.', 'danger')
-            return redirect(url_for('cart.cart_page'))
+            if is_ajax:
+                return jsonify({'success': False, 'message': 'Invalid input'}), 400
+            else:
+                flash('Invalid input. Please try again.', 'danger')
+                return redirect(url_for('cart.cart_page'))
 
         # Remove the item
-        if Cart.remove_item_from_cart(cart_item_id):
-            flash('Item removed from cart!', 'success')
-        else:
-            flash('Failed to remove item.', 'danger')
+        success = Cart.remove_item_from_cart(cart_item_id)
 
-        return redirect(url_for('cart.cart_page'))
+        if is_ajax:
+            if success:
+                return jsonify({'success': True, 'message': 'Item removed from cart!'}), 200
+            else:
+                return jsonify({'success': False, 'message': 'Failed to remove item.'}), 500
+        else:
+            if success:
+                flash('Item removed from cart!', 'success')
+            else:
+                flash('Failed to remove item.', 'danger')
+
+            return redirect(url_for('cart.cart_page'))
     except Exception as e:
         import traceback
         print(f"Error in remove_item: {str(e)}")
         print(traceback.format_exc())
-        flash('An error occurred. Please try again.', 'danger')
-        return redirect(url_for('cart.cart_page'))
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': 'An error occurred'}), 500
+        else:
+            flash('An error occurred. Please try again.', 'danger')
+            return redirect(url_for('cart.cart_page'))
