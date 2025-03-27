@@ -1,0 +1,108 @@
+<!-- filepath: /Users/apwin/ApWin/CourseProject/cs-516-final-project/app/templates/cart.html -->
+{% extends "base.html" %} {% block content %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/cart.css') }}"
+/>
+<div class="container">
+  <div class="cart-container">
+    <h1>Shopping Cart</h1>
+    {% if cart_items %}
+    <div class="cart-table">
+      <div class="cart-header">
+        <div class="header-item">Product</div>
+        <div class="header-price">Price</div>
+      </div>
+
+      {% for item in cart_items %}
+      <div class="cart-item">
+        <div class="item-details">
+          <img
+            src="{{ url_for('static', filename='images/placeholder.png') }}"
+            alt="{{ item.product_name }}"
+          />
+          <div class="item-info">
+            <h3>{{ item.product_name }}</h3>
+            <div class="item-meta">Added: {{ item.added_at }}</div>
+            <div class="quantity-controls">
+              <form
+                class="update-form"
+                action="{{ url_for('cart.update_quantity') }}"
+                method="post"
+              >
+                <input
+                  type="hidden"
+                  name="cart_item_id"
+                  value="{{ item.cart_item_id }}"
+                />
+                <input
+                  type="number"
+                  name="quantity"
+                  value="{{ item.quantity }}"
+                  min="1"
+                  class="quantity-input"
+                />
+                <button type="submit" class="btn-update">Update</button>
+              </form>
+              <form
+                class="remove-form"
+                action="{{ url_for('cart.remove_item') }}"
+                method="post"
+              >
+                <input
+                  type="hidden"
+                  name="cart_item_id"
+                  value="{{ item.cart_item_id }}"
+                />
+                <button type="submit" class="btn-remove">Remove</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        <div class="item-price">
+          <div class="unit-price">${{ item.unit_price }}</div>
+          <div class="total-item-price">${{ item.total_price|round(2) }}</div>
+        </div>
+      </div>
+      {% endfor %}
+
+      <div class="cart-total">
+        <div class="total-label">
+          Total Amount ({{ cart_items|length }} Items):
+        </div>
+        <div class="total-price">${{ total_amount }}</div>
+      </div>
+    </div>
+    {% else %}
+    <p class="empty-cart">Your cart is empty.</p>
+    <a href="{{ url_for('product.product_all') }}" class="btn-continue-shopping"
+      >Continue Shopping</a
+    >
+    {% endif %}
+  </div>
+
+  {% if cart_items %}
+  <div class="checkout-sidebar">
+    <div class="delivery-address">
+      <h3>Delivery Address:</h3>
+      {% if current_user.address %}
+      <p>{{ current_user.address }}</p>
+      <a href="#" class="btn-change">Change</a>
+      {% else %}
+      <p>No address on file. Please add an address.</p>
+      <a href="#" class="btn-change">Add Address</a>
+      {% endif %}
+    </div>
+
+    <div class="order-summary">
+      <h3>Order Summary</h3>
+      <div class="subtotal">
+        <span>Subtotal:</span>
+        <span>${{ total_amount }}</span>
+      </div>
+      <a href="#" class="btn-checkout">Proceed to Checkout</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
