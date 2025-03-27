@@ -96,8 +96,8 @@ main {
 }
 
 .product-list h2 {
-    display: inline-block;
-    margin-left: auto;
+    display: block;
+    margin-left: 0;
     margin-bottom: 15px;
     color: black;
 }
