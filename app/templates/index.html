@@ -19,6 +19,11 @@
         <th scope="row">{{product.id}}</th>
         <td>{{product.name}}</td>
         <td>{{product.price}}</td>
+        <td>
+          <form action="{{ url_for('wishlist.wishlist_add', product_id=product.id) }}" method="POST">
+            <input type="submit" value="Add to Wishlist" class="btn btn-primary"/>
+          </form>
+        </td>
       </tr>
     {% endfor %}
   </tbody>
@@ -33,13 +38,15 @@
       <th scope="col">Purchase ID</th>
       <th scope="col">Product Name</th>
       <th scope="col">Price</th>
+      <th scope="col">Time Purchased</th>
     </tr>
   </thead>
   <tbody>
     {% for purchase in purchase_history%}
       <tr>
-        <th scope="row">{{purchase.id}}</th>
-        <td>{{purchase.pid}}</td>
+        <th scope="row">{{purchase.purchase_id}}</th>
+        <td>{{ purchase.product_name }}</td>
+        <td>{{ purchase.price }}</td>
         <td>{{purchase.time_purchased}}</td>
       </tr>
     {% endfor %}

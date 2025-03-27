@@ -4,6 +4,10 @@ from flask_login import login_user, logout_user, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo
+from flask_login import login_required
+from .models.purchase import Purchase 
+from flask import current_app as app
+from werkzeug.security import generate_password_hash
 
 from .models.user import User
 
@@ -72,3 +76,90 @@ def register():
 def logout():
     logout_user()
     return redirect(url_for('index.index'))
+
+
+@bp.route('/purchases')
+@login_required
+def purchases():
+    # Fetch all purchases for the logged-in user
+    #user_purchases = Purchase.get_all_purchases_by_user(current_user.id)
+    #return render_template('purchases.html', purchases=user_purchases)
+    user_orders = Purchase.get_orders_summary_by_user(current_user.id)
+    return render_template('purchases.html', orders=user_orders)
+    
+    
+
+@bp.route('/account', methods=['GET', 'POST'])
+@login_required
+def account():
+    if request.method == 'POST':
+        # Retrieve form data
+        new_firstname = request.form.get('firstname')
+        new_lastname = request.form.get('lastname')
+        new_email = request.form.get('email')
+        new_password=request.form.get('password')
+        new_address = request.form.get('address')
+        new_balance = request.form.get('balance')
+        new_balance = float(new_balance) if new_balance else 0.00
+
+        # Update the user details in the database
+        try:
+            if new_password:
+                hashed_password = generate_password_hash(new_password)
+                app.db.execute('''
+                    UPDATE Users
+                    SET firstname = :firstname,
+                        lastname = :lastname,
+                        email = :email,
+                        password = :password,
+                        address = :address,
+                        balance = :balance
+                    WHERE id = :id
+                ''', id=current_user.id, firstname=new_firstname, lastname=new_lastname, email=new_email, password=hashed_password, address=new_address, balance=new_balance)
+            else:
+                app.db.execute('''
+                    UPDATE Users
+                    SET firstname = :firstname,
+                        lastname = :lastname,
+                        email = :email,
+                        address = :address,
+                        balance = :balance
+                    WHERE id = :id
+                ''', id=current_user.id, firstname=new_firstname, lastname=new_lastname, email=new_email, address=new_address, balance=new_balance)
+
+            flash("Profile updated successfully!", "success")
+        except Exception as e:
+            flash("Error updating profile: " + str(e), "danger")
+
+        user_details = app.db.execute('''
+        SELECT id, email, firstname, lastname, address, balance
+        FROM Users
+        WHERE id = :id
+    ''', id=current_user.id)[0]
+
+        return render_template('profile.html', user=user_details)
+        #return redirect(url_for('users.account'))
+
+    # Fetch the current user details
+    user_details = app.db.execute('''
+        SELECT id, email, firstname, lastname, address, balance
+        FROM Users
+        WHERE id = :id
+    ''', id=current_user.id)[0]
+
+    return render_template('profile.html', user=user_details)
+
+@bp.route('/user/<int:user_id>')
+def public_profile(user_id):
+    user = app.db.execute('''
+        SELECT id, firstname, lastname, email
+        FROM Users
+        WHERE id = :id
+    ''', id=user_id)
+
+    if not user:
+        flash("User not found.", "danger")
+        return redirect(url_for('index'))  # or a 404 page
+
+    return render_template('public_profile.html', user=user[0])
+

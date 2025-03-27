@@ -47,14 +47,14 @@
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
             <li class="nav-item"><a class="nav-link" href="{{ url_for('product.product_all') }}">Products</a></li>
             <li class="nav-item"><a class="nav-link" href="{{ url_for('index.index') }}">Cart</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('index.index') }}">Orders</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('users.purchases') }}">Orders</a></li>
             <li class="nav-item">
               <a class="nav-link {% if request.endpoint == 'inventory.inventory_page' %}active{% endif %}"
                  href="{{ url_for('inventory.inventory_page') }}">
                 Inventory
               </a>
             </li>            
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('index.index') }}">Profile</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('users.account') }}">Profile</a></li>
             <li class="nav-item"><a class="nav-link" href="{{ url_for('review.review_history_all') }}">Review</a></li>
           </ul>
           <div class="d-flex">
