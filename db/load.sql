@@ -23,6 +23,10 @@ SELECT pg_catalog.setval('public.users_id_seq',
 
 \COPY Inventory FROM 'Inventory.csv' WITH DELIMITER ',' NULL '' CSV;
 
+\COPY Orders FROM 'Orders.csv' WITH DELIMITER ',' NULL '' CSV;
+
+\COPY Order_Items FROM 'Order_Items.csv' WITH DELIMITER ',' NULL '' CSV;
+
 -- No need to reset identity sequence manually if using GENERATED AS IDENTITY
 
 
