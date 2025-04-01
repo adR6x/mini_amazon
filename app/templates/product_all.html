@@ -67,7 +67,12 @@
 
           <div class="product-info">
             <p class="product-description">{{ product.description }}</p>
-            <p class="price">${{ product.price }}</p>
+            <div class="price-review">
+              <p class="price">${{ product.price }}</p>
+              <p class="avg_rating">5</p>
+              <p class="rating_stars">&#9733;&#9733;&#9733;&#9733;&#9734;</p>
+              <p class="total_rating">(999+)</p>
+            </div>
             <div class="cart-actions">
               <input type="number" value="1" min="1" class="quantity-input" />
               <button
