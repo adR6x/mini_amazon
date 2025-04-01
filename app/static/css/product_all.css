@@ -137,11 +137,27 @@ main {
     margin: 5px 0;
 }
 
+.price-review {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    white-space: nowrap;
+}
+
 .price {
+    font-size: 1.2rem;
     font-weight: bold;
-    font-size: 1.1em;
-    margin: 5px 0;
     color: green;
+}
+
+.avg_rating, .total_rating {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.rating_stars {
+    font-size: 0.9rem;
+    color: gold;
 }
 
 .unit-price {
