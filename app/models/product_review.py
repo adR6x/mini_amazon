@@ -82,3 +82,17 @@ class ProductReview:
             DELETE FROM Product_Reviews
             WHERE review_id = :review_id
         ''', review_id=review_id)
+
+    @staticmethod
+    def get_by_id(review_id):
+        rows = app.db.execute('''
+            SELECT pr.review_id, pr.product_id, pr.reviewer_id, pr.rating,
+                   pr.review_text, pr.image_url, pr.created_at, pr.updated_at,
+                   p.name AS product_name,
+                   u.firstname || ' ' || u.lastname AS seller_name
+            FROM Product_Reviews pr
+            JOIN Products p ON pr.product_id = p.product_id
+            JOIN Users u ON p.seller_id = u.id
+            WHERE pr.review_id = :review_id
+        ''', review_id=review_id)
+        return ProductReview(*rows[0]) if rows else None
