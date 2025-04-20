@@ -96,3 +96,11 @@ class ProductReview:
             WHERE pr.review_id = :review_id
         ''', review_id=review_id)
         return ProductReview(*rows[0]) if rows else None
+
+    @staticmethod
+    def get_by_user_and_product(user_id, product_id):
+        rows = app.db.execute('''
+        SELECT * FROM Product_Reviews
+        WHERE reviewer_id=:user_id AND product_id=:product_id
+        ''', user_id=user_id, product_id=product_id)
+        return ProductReview(*rows[0]) if rows else None
