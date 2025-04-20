@@ -114,3 +114,20 @@ class Inventory:
     def get_total_inventory_count():
         result = app.db.execute('SELECT COUNT(*) FROM Inventory')
         return result[0][0] if result else 0
+
+    @staticmethod
+    def delete_item(seller_id, product_id):
+        # Delete from Inventory table
+        print("deleting item")
+        print(seller_id)
+        print(product_id)
+        app.db.execute('''
+            DELETE FROM Inventory
+            WHERE seller_id = :seller_id AND product_id = :product_id
+        ''', seller_id=seller_id, product_id=product_id)
+
+        # Delete from Products table
+        app.db.execute('''
+            DELETE FROM Products
+            WHERE seller_id = :seller_id AND product_id = :product_id
+        ''', seller_id=seller_id, product_id=product_id)

@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, flash, redirect, url_for
 from app.models.inventory import Inventory
 from flask_login import current_user
 from flask import render_template, request
@@ -79,3 +79,18 @@ def update_inventory_item(product_id):
     except Exception as e:
         print(f"Error updating inventory item: {e}")
         return jsonify(success=False, message="Failed to update inventory item.")
+
+@inventory_bp.route('/inventory/item/<int:product_id>/delete', methods=['POST'])
+def delete_inventory_item(product_id):
+    seller_id = current_user.id
+
+    try:
+        Inventory.delete_item(seller_id, product_id)
+        print("deleting item")
+        print(seller_id)
+        print(product_id)
+        flash('Inventory item deleted successfully.', 'success')
+    except Exception as e:
+        flash(f'Error deleting inventory item: {e}', 'danger')
+
+    return redirect(url_for('inventory.inventory_page'))
