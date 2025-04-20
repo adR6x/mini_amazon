@@ -1,0 +1,202 @@
+<!-- filepath: /Users/apwin/ApWin/CourseProject/cs-516-final-project/app/templates/cart.html -->
+{% extends "base.html" %} {% block content %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/cart.css') }}"
+/>
+<div class="container">
+  <div class="cart-container">
+    <h1>Shopping Cart</h1>
+    {% if cart_items %}
+    <div class="cart-table">
+      <div class="cart-header">
+        <div class="header-item">Product</div>
+        <div class="header-price">Price</div>
+      </div>
+
+      {% for item in cart_items %}
+      <div class="cart-item">
+        <div class="item-details">
+          <img
+            src="{{ url_for('static', filename='images/placeholder.png') }}"
+            alt="{{ item.product_name }}"
+          />
+          <div class="item-info">
+            <h3>{{ item.product_name }}</h3>
+            <div class="item-meta">Added: {{ item.added_at }}</div>
+            <div class="quantity-controls">
+              <form
+                class="update-form"
+                action="{{ url_for('cart.update_quantity') }}"
+                method="post"
+              >
+                <input
+                  type="hidden"
+                  name="cart_item_id"
+                  value="{{ item.cart_item_id }}"
+                />
+                <input
+                  type="number"
+                  name="quantity"
+                  value="{{ item.quantity }}"
+                  min="1"
+                  class="quantity-input"
+                  data-item-id="{{ item.cart_item_id }}"
+                />
+              </form>
+              <form
+                class="remove-form"
+                action="{{ url_for('cart.remove_item') }}"
+                method="post"
+              >
+                <input
+                  type="hidden"
+                  name="cart_item_id"
+                  value="{{ item.cart_item_id }}"
+                />
+                <button type="submit" class="btn-remove">Remove</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        <div class="item-price">
+          <div class="unit-price">${{ item.unit_price }}</div>
+          <div class="total-item-price">${{ item.total_price|round(2) }}</div>
+        </div>
+      </div>
+      {% endfor %}
+
+      <div class="cart-total">
+        <div class="total-label">
+          Total Amount ({{ cart_items|length }} Items):
+        </div>
+        <div class="total-price">${{ total_amount }}</div>
+      </div>
+    </div>
+    {% else %}
+    <p class="empty-cart">Your cart is empty.</p>
+    <a href="{{ url_for('product.product_all') }}" class="btn-continue-shopping"
+      >Continue Shopping</a
+    >
+    {% endif %}
+  </div>
+  <div
+    id="loading-indicator"
+    style="
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 255, 255, 0.8);
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+    "
+  >
+    Updating Cart...
+  </div>
+
+  {% if cart_items %}
+  <div class="checkout-sidebar">
+    <div class="delivery-address">
+      <h3>Delivery Address:</h3>
+      {% if current_user.address %}
+      <p>{{ current_user.address }}</p>
+      <a href="#" class="btn-change">Change</a>
+      {% else %}
+      <p>No address on file. Please add an address.</p>
+      <a href="#" class="btn-change">Add Address</a>
+      {% endif %}
+    </div>
+
+    <div class="order-summary">
+      <h3>Order Summary</h3>
+      <div class="subtotal">
+        <span>Subtotal:</span>
+        <span>${{ total_amount }}</span>
+      </div>
+      <a href="#" class="btn-checkout">Proceed to Checkout</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const quantityInputs = document.querySelectorAll(".quantity-input");
+    const loadingIndicator = document.getElementById("loading-indicator");
+
+    quantityInputs.forEach((input) => {
+      let updateTimer;
+
+      input.addEventListener("change", async function () {
+        const cartItemId = this.getAttribute("data-item-id");
+        const newQuantity = this.value;
+
+        clearTimeout(updateTimer);
+
+        updateTimer = setTimeout(async () => {
+          try {
+            // Show loading indicator
+            loadingIndicator.style.display = "block";
+
+            // Send AJAX request
+            const response = await fetch(
+              '{{ url_for("cart.update_quantity") }}',
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded",
+                  "X-Requested-With": "XMLHttpRequest",
+                },
+                body: new URLSearchParams({
+                  cart_item_id: cartItemId,
+                  quantity: newQuantity,
+                }),
+              }
+            );
+
+            // Check response
+            if (response.ok) {
+              const result = await response.json();
+
+              if (result.success) {
+                // Update the total price for this item
+                const itemRow = this.closest(".cart-item");
+                const totalPriceElement =
+                  itemRow.querySelector(".total-item-price");
+                const unitPriceElement = itemRow.querySelector(".unit-price");
+
+                if (totalPriceElement && unitPriceElement) {
+                  const unitPrice = parseFloat(
+                    unitPriceElement.textContent.replace("$", "")
+                  );
+                  const newTotalPrice = (unitPrice * newQuantity).toFixed(2);
+                  totalPriceElement.textContent = "$" + newTotalPrice;
+                }
+
+                // Update the cart total
+                // This would require additional code to recalculate the total
+
+                // Show success message
+                // alert(result.message || "Quantity updated!");
+              } else {
+                alert(result.message || "Failed to update quantity");
+              }
+            } else {
+              alert("Failed to update quantity. Please try again.");
+            }
+          } catch (error) {
+            console.error("Error updating quantity:", error);
+            alert("An error occurred. Please try again.");
+          } finally {
+            // Hide loading indicator
+            loadingIndicator.style.display = "none";
+          }
+        }, 300);
+      });
+    });
+  });
+</script>
+{% endblock %}
