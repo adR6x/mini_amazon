@@ -122,6 +122,56 @@ LIMIT 5;
             )
         for row in rows
         ]
+        
+    @staticmethod
+    def get_by_search(query):
+        rows = app.db.execute('''
+        CREATE EXTENSION IF NOT EXISTS pg_trgm;
+        SET pg_trgm.similarity_threshold = 0.2;
+        SELECT 
+        p.product_id AS id,
+        p.name,
+        p.price,
+        p.description,
+        p.image_url,
+        p.seller_id,
+        p.category_id,
+        GREATEST(
+            similarity(p.name::TEXT, CAST(:query AS TEXT)),
+            similarity(p.description::TEXT, CAST(:query AS TEXT)),
+            similarity(u.firstname::TEXT, CAST(:query AS TEXT)),
+            similarity(u.lastname::TEXT, CAST(:query AS TEXT)),
+            similarity(u.address::TEXT, CAST(:query AS TEXT)),
+            similarity(c.name::TEXT, CAST(:query AS TEXT)),
+            similarity(c.description::TEXT, CAST(:query AS TEXT))
+        ) AS rank
+        FROM Products p
+        LEFT JOIN users u ON p.seller_id = u.id
+        LEFT JOIN categories c ON p.category_id = c.category_id
+        WHERE
+        p.name % :query OR
+        p.description % :query OR
+        u.firstname % :query OR
+        u.lastname % :query OR
+        u.address % :query OR
+        c.name % :query OR
+        c.description % :query
+        ORDER BY rank DESC
+        LIMIT 5;
+        ''', query=str(query))
+        return [
+            Product(
+                id=row[0],  # product_id -> index 0
+                name=row[1],  # name -> index 1
+                price=row[2],  # price -> index 2
+                description=row[3],  # description -> index 3
+                image_url=row[4],
+                # image_url=get_bing_square_image(row[1]),  # image_url from Bing, using name (index 1)
+                seller_id=row[5],  # seller_id -> index 5
+                category_id=row[6]   # category_id -> index 6
+            )
+        for row in rows
+        ]        
 
 
 class Category:
