@@ -80,7 +80,7 @@ def by_category():
     ## Catagories
     unique_cat = Category.get_unique()
 
-    products = Product.get_all_rnd5()
+    products = Product.get_by_cat(category_id)
     
     page_heading="Category: "+category_name        
     
@@ -105,3 +105,4 @@ def by_category():
                            br_category=unique_cat,
                            form=filter_form,
                             page_heading=page_heading)    
+    
