@@ -56,7 +56,7 @@ def form_validate(form):
     
 class SearchForm(FlaskForm):
     query = StringField("Search", validators=[Optional()])
-    submit = SubmitField("Search")    
+    submit = SubmitField("🔍")    
 
 def search_validate(form):
     query = form.query.data
@@ -75,7 +75,7 @@ def product_all():
     unique_cat = Category.get_unique()
 
     products = Product.get_all_rnd5()        
-    page_heading="All Products"
+    page_heading="All Products 🛍️"
     
     filter_form = FilterForm()
     if filter_form.validate_on_submit():
