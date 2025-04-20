@@ -1,7 +1,7 @@
 from flask import render_template, redirect, url_for, request, jsonify
 from flask_login import current_user
 from flask_wtf import FlaskForm
-from wtforms import SelectField, SubmitField, IntegerField, FloatField
+from wtforms import SelectField, SubmitField, IntegerField, FloatField, StringField
 from wtforms.validators import DataRequired, NumberRange, Optional
 import datetime
 
@@ -23,7 +23,35 @@ class FilterForm(FlaskForm):
     most_exp = IntegerField("Most Expensive", validators=[Optional(), NumberRange(min=0)], default=None)
     submit = SubmitField("Apply Filters")
 
+def form_validate(form):
+    review=form.review.data 
+    min_price=form.min_price.data
+    max_price=form.max_price.data
+    most_exp=form.most_exp.data
+    
+    if all(v is not None for v in [review, min_price, max_price, most_exp]):
+        return Product.get_filtered_all(review, min_price, max_price, most_exp)
 
+    elif most_exp is not None:
+        return Product.get_filtered_top_exp(most_exp)
+    
+    else:
+        return Product.get_all_rnd5()
+    
+class SearchForm(FlaskForm):
+    query = StringField("Search", validators=[Optional()])
+    submit = SubmitField("Search")    
+
+def search_validate(form):
+    query = form.query.data
+    if query:
+        products = Product.get_by_search(query)
+        page_heading="Search results for " + query
+        return products, page_heading
+    else:
+        page_heading="Oops! You didn't search for anything 🙃"
+        return Product.get_all_rnd5(), page_heading
+    
 @bp.route('/product_all', methods=['GET','POST'])
 def product_all():
     
@@ -35,24 +63,18 @@ def product_all():
     
     filter_form = FilterForm()
     if filter_form.validate_on_submit():
-        review=filter_form.review.data 
-        min_price=filter_form.min_price.data
-        max_price=filter_form.max_price.data
-        most_exp=filter_form.most_exp.data
+        products = form_validate(filter_form)
         
-        if all(v is not None for v in [review, min_price, max_price, most_exp]):
-            products = Product.get_filtered_all(review, min_price, max_price, most_exp)
-
-        elif most_exp is not None:
-            products = Product.get_filtered_top_exp(most_exp)
-        
-        else:
-            products = Product.get_all_rnd5()
+    search_form = SearchForm()
+    if search_form.validate_on_submit():
+        products = search_validate(search_form)[0]
+        page_heading = search_validate(search_form)[1]    
         
     return render_template('product_all.html',
                            avail_products=products,
                            br_category=unique_cat,
                            form=filter_form,
+                           search_form=search_form,
                            page_heading=page_heading)
     
 
@@ -71,23 +93,16 @@ def by_category():
     
     filter_form = FilterForm()
     if filter_form.validate_on_submit():
-        review=filter_form.review.data 
-        min_price=filter_form.min_price.data
-        max_price=filter_form.max_price.data
-        most_exp=filter_form.most_exp.data
+        products = form_validate(filter_form)
         
-        if all(v is not None for v in [review, min_price, max_price, most_exp]):
-            products = Product.get_filtered_all(review, min_price, max_price, most_exp)
-
-        elif most_exp is not None:
-            products = Product.get_filtered_top_exp(most_exp)
-        
-        else:
-            products = Product.get_all_rnd5()
+    search_form = SearchForm()
+    if search_form.validate_on_submit():
+        products = search_validate(search_form)[0]
+        page_heading = search_validate(search_form)[1]   
         
     return render_template('product_all.html',
                            avail_products=products,
                            br_category=unique_cat,
                            form=filter_form,
-                            page_heading=page_heading)    
-    
+                           search_form=search_form,
+                           page_heading=page_heading) 

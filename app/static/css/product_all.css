@@ -59,23 +59,42 @@ main {
 
 .search-bar {
     display: flex;
-    gap: 10px;
     margin-bottom: 10px;
 }
 
-.search-bar input {
+.search-bar form {
+    display: flex;
+    width: 100%;
+    gap: 5px; /* Small gap between input and button */
+}
+
+.search-input {
     flex-grow: 1;
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 5px;
 }
 
-.search-bar button {
+.search-button {
     padding: 10px 15px;
     background: #ccc;
     border: none;
     border-radius: 5px;
     cursor: pointer;
+}
+
+.search-bar input.search-input {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    transition: box-shadow 0.2s ease;
+}
+
+.search-bar input.search-input:focus {
+    outline: none;
+    border-color: #66afe9;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.4);
 }
 
 .filters {
