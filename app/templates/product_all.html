@@ -9,14 +9,14 @@
 <body>
   <div class="container">
     <aside class="sidebar">
-      <h3>Browse</h3>
+      <h3>Browse 🧭</h3>
       <ul>
         <li><a href="{{ url_for('product.product_all') }}">All Products</a></li>
         {% for category in br_category %}
         <li><a href="{{ url_for('product.by_category', category_id=category.id, category_name=category.name) }}">{{ category.name }}</a></li>
         {% endfor %}
       </ul>
-      <h3>Filter</h3>
+      <h3>Filter 🪄</h3>
       <form method="POST" class="filter-form">
         {{ form.hidden_tag() }}
         <div class="form-group">
@@ -44,12 +44,14 @@
     </aside>
     <main>
       <div class="search-bar">
-        <form method="POST">
+        <form method="POST" class="search-form">
           {{ search_form.hidden_tag() }}
-          {{ search_form.query(class_="search-input", placeholder="Search all products...") }}
-          {{ search_form.submit(class_="search-button") }}
+          <div class="search-wrapper">
+            {{ search_form.query(class_="search-input", placeholder="Search all products...") }}
+            <button type="submit" class="search-button">🔍</button>
+          </div>
         </form>
-      </div>      
+      </div>            
       <div class="filters">
         <button id="sort-price">Price ▲▼</button>
         <button id="sort-review">Review ▲▼</button>
