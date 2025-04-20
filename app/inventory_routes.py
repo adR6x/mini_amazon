@@ -6,55 +6,24 @@ from flask import render_template, request
 
 inventory_bp = Blueprint('inventory', __name__)
 
-# @inventory_bp.route('/inventory_page')
-# def inventory_page():
-#     seller_id = current_user.id
-#     inventory = Inventory.get_by_seller(seller_id)
-#     # print(seller_id)
-#     # print(inventory)
-#     return render_template("inventory.html", inventory=inventory)
-
-@inventory_bp.route('/inventory/item/<int:product_id>')
-def inventory_detail(product_id):
-    from flask_login import current_user
-    inventory = Inventory.get_by_seller(current_user.id)
-    item = next((i for i in inventory if i.product_id == product_id), None)
+@inventory_bp.route('/inventory', methods=['GET'])
+def inventory_page():
+    page = request.args.get('page', 1, type=int)
+    items_per_page = 9
+    total_items = Inventory.get_total_inventory_count()
+    total_pages = (total_items + items_per_page - 1) // items_per_page
+    # print(page)
+    # print(items_per_page)
+    inventory_items = Inventory.get_inventory_items(page, items_per_page)
+    # print(inventory_items)
     
-    if not item:
-        return "Item not found", 404
-    
-    return render_template("inventory_detail.html", item=item)
-
-
-@inventory_bp.route('/inventory/item/<int:product_id>/update', methods=['POST'])
-def update_inventory_field(product_id):
-    from flask_login import current_user
-    data = request.get_json()
-    field = data.get("field")
-    value = data.get("value")
-
-    try:
-        if field == "quantity_available":
-            value = int(value)
-        elif field == "price":
-            value = float(value)
-        else:
-            return jsonify({"error": "Invalid field"}), 400
-    except ValueError:
-        return jsonify({"error": "Invalid value format"}), 400
-
-    result = Inventory.update_field(current_user.id, product_id, field, value)
-    if not result:
-        return jsonify({"error": "Update failed"}), 400
-
-    return jsonify({"success": True}), 200
+    return render_template('inventory.html', inventory_items=inventory_items, page=page, total_pages=total_pages)
 
 @inventory_bp.route('/inventory/add', methods=['POST'])
 def add_inventory():
     from flask_login import current_user
     data = request.get_json()
     short_name = data.get("short_name")
-    print(short_name)
     description = data.get("description")
     image_url = data.get("image_url")
     price = data.get("price")
@@ -83,15 +52,30 @@ def show_add_inventory_form():
     return render_template('inventory_add.html', categories=categories)
 
 
-@inventory_bp.route('/inventory', methods=['GET'])
-def inventory_page():
-    page = request.args.get('page', 1, type=int)
-    items_per_page = 9
-    total_items = Inventory.get_total_inventory_count()
-    total_pages = (total_items + items_per_page - 1) // items_per_page
-    print(page)
-    print(items_per_page)
-    inventory_items = Inventory.get_inventory_items(page, items_per_page)
-    print(inventory_items)
-    
-    return render_template('inventory.html', inventory_items=inventory_items, page=page, total_pages=total_pages)
+@inventory_bp.route('/inventory/item/<int:product_id>', methods=['GET'])
+def inventory_detail(product_id):
+    item = Inventory.get_inventory_detail(product_id)
+
+    categories = Inventory.get_all_categories()
+
+    if item:
+        return render_template('inventory_detail.html', item=item, categories=categories)
+    else:
+        return "Item not found", 404
+
+
+
+@inventory_bp.route('/inventory/item/<int:product_id>/update', methods=['POST'])
+def update_inventory_item(product_id):
+    print("update inventory item")
+    data = request.json
+    seller_id = current_user.id  # Assuming you have access to the current user's ID
+
+    try:
+        # Update each field
+        for field, value in data.items():
+            Inventory.update_field(seller_id, product_id, field, value)
+        return jsonify(success=True, message="Inventory item updated successfully.")
+    except Exception as e:
+        print(f"Error updating inventory item: {e}")
+        return jsonify(success=False, message="Failed to update inventory item.")
