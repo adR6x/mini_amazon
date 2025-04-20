@@ -99,6 +99,30 @@ LIMIT :most_exp
                             )
         return [Product(*row) for row in rows]
 
+    @staticmethod
+    def get_by_cat(category_id):
+        rows = app.db.execute('''
+SELECT product_id AS id, name, price, description, image_url, seller_id, category_id
+FROM Products
+WHERE category_id = :category_id
+LIMIT 5;
+''',
+                            category_id=category_id
+                             )
+        return [
+            Product(
+                id=row[0],  # product_id -> index 0
+                name=row[1],  # name -> index 1
+                price=row[2],  # price -> index 2
+                description=row[3],  # description -> index 3
+                image_url=row[4],
+                # image_url=get_bing_square_image(row[1]),  # image_url from Bing, using name (index 1)
+                seller_id=row[5],  # seller_id -> index 5
+                category_id=row[6]   # category_id -> index 6
+            )
+        for row in rows
+        ]
+
 
 class Category:
     def __init__(self, id, name, description=None):
