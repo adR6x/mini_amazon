@@ -190,3 +190,10 @@ def public_profile(user_id):
 
 
     return render_template('public_profile.html', user=user, is_seller=is_seller, reviews=reviews)
+
+@bp.route('/orders')
+@login_required
+def orders():
+    """Route for viewing orders where the user is the seller."""
+    seller_orders = Purchase.get_seller_orders(current_user.id)
+    return render_template('orders.html', orders=seller_orders)
