@@ -213,3 +213,27 @@ def remove_item():
         else:
             flash('An error occurred. Please try again.', 'danger')
             return redirect(url_for('cart.cart_page'))
+
+
+@cart.route('/checkout', methods=['POST'])
+@login_required
+def checkout():
+    try:
+        print("Starting checkout process for user:", current_user.id)
+        result = Cart.checkout(current_user.id)
+        print("Checkout result:", result)
+        
+        if result['success']:
+            print("Checkout successful, redirecting to purchases page")
+            flash('Order placed successfully!', 'success')
+            return redirect(url_for('users.purchases'))
+        else:
+            print("Checkout failed:", result['message'])
+            flash(result['message'], 'danger')
+            return redirect(url_for('cart.cart_page'))
+    except Exception as e:
+        import traceback
+        print(f"Error in checkout route: {str(e)}")
+        print(traceback.format_exc())
+        flash('An error occurred during checkout. Please try again.', 'danger')
+        return redirect(url_for('cart.cart_page'))
