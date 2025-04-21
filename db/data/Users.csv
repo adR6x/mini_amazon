@@ -1,2 +1,2 @@
-0,icecream@tastes.good,pbkdf2:sha256:260000$1GvmeoAkcWb89TyU$5f711eafb243c1c1a884715dd9bd6d185f29ccd3dab59ad19cc201a7260091cb,Joey,Shmoey,,
-1,test@test.com,pbkdf2:sha256:600000$4KvdBaIvcqM1kT2C$aac130f756b1b86b60c762ebf761c203e97cac2e4d6f0fe387e0ac439a7b48f3,John,Doe,,
+0,icecream@tastes.good,pbkdf2:sha256:260000$1GvmeoAkcWb89TyU$5f711eafb243c1c1a884715dd9bd6d185f29ccd3dab59ad19cc201a7260091cb,Joey,Shmoey,"123 Main St, Anytown, USA",1000.00
+1,test@test.com,pbkdf2:sha256:600000$4KvdBaIvcqM1kT2C$aac130f756b1b86b60c762ebf761c203e97cac2e4d6f0fe387e0ac439a7b48f3,John,Doe,"456 Oak Ave, Somewhere, USA",500.00
