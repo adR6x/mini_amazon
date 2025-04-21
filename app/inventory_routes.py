@@ -10,11 +10,11 @@ inventory_bp = Blueprint('inventory', __name__)
 def inventory_page():
     page = request.args.get('page', 1, type=int)
     items_per_page = 9
-    total_items = Inventory.get_total_inventory_count()
+    total_items = Inventory.get_total_inventory_count(current_user.id)
     total_pages = (total_items + items_per_page - 1) // items_per_page
     # print(page)
     # print(items_per_page)
-    inventory_items = Inventory.get_inventory_items(page, items_per_page)
+    inventory_items = Inventory.get_inventory_items(current_user.id, page, items_per_page)
     # print(inventory_items)
     
     return render_template('inventory.html', inventory_items=inventory_items, page=page, total_pages=total_pages)
@@ -74,6 +74,7 @@ def update_inventory_item(product_id):
     try:
         # Update each field
         for field, value in data.items():
+            # print(field, value)
             Inventory.update_field(seller_id, product_id, field, value)
         return jsonify(success=True, message="Inventory item updated successfully.")
     except Exception as e:
