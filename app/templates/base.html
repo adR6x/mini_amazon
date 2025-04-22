@@ -71,7 +71,16 @@
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('users.purchases') }}"
+              <a
+                class="nav-link {% if request.endpoint == 'users.purchases' %}active{% endif %}"
+                href="{{ url_for('users.purchases') }}"
+                >My Purchases</a
+              >
+            </li>
+            <li class="nav-item">
+              <a
+                class="nav-link {% if request.endpoint == 'users.orders' %}active{% endif %}"
+                href="{{ url_for('users.orders') }}"
                 >Orders</a
               >
             </li>
@@ -98,13 +107,23 @@
           </ul>
           <div class="d-flex">
             <a href="{{ url_for('users.logout') }}" class="btn btn-light"
-              >Log out</a
+              >Logout</a
             >
           </div>
           {% else %}
-          <div class="d-flex ms-auto">
-            <a href="{{ url_for('users.login') }}" class="btn btn-light"
-              >Log in</a
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('product.product_all') }}"
+                >Products</a
+              >
+            </li>
+          </ul>
+          <div class="d-flex">
+            <a href="{{ url_for('users.login') }}" class="btn btn-light me-2"
+              >Login</a
+            >
+            <a href="{{ url_for('users.register') }}" class="btn btn-light"
+              >Register</a
             >
           </div>
           {% endif %}
@@ -112,9 +131,26 @@
       </div>
     </nav>
 
-    <div class="container mt-3">{% block content %}{% endblock %}</div>
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="container mt-3">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="container mt-4">
+      {% block content %} {% endblock %}
+    </div>
 
     <!-- Bootstrap 5 Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
   </body>
 </html>

@@ -1,36 +1,47 @@
 {% extends "base.html" %}
-
 {% block content %}
-
 <br><br>
-
 <h2>Reviews:</h2>
-<!-- Bootstrap Nav Tabs -->
-<ul class="nav nav-tabs container" id="reviewTabs" role="tablist">
+
+<!-- Nav tabs forced horizontal with flex -->
+<ul class="nav nav-tabs d-flex" id="reviewTabs" role="tablist">
   <li class="nav-item" role="presentation">
-    <button class="nav-link active" id="product-tab" data-bs-toggle="tab" data-bs-target="#product" type="button" role="tab" aria-controls="product" aria-selected="true">
-      Product Reviews
-    </button>
+    <button
+      class="nav-link {% if review_type=='product' %}active{% endif %}"
+      id="product-tab"
+      data-bs-toggle="tab"
+      data-bs-target="#product"
+      type="button"
+      role="tab"
+      aria-selected="{{ 'true' if review_type=='product' else 'false' }}"
+    >Product Reviews</button>
   </li>
   <li class="nav-item" role="presentation">
-    <button class="nav-link" id="seller-tab" data-bs-toggle="tab" data-bs-target="#seller" type="button" role="tab" aria-controls="seller" aria-selected="false">
-      Seller Reviews
-    </button>
+    <button
+      class="nav-link {% if review_type=='seller' %}active{% endif %}"
+      id="seller-tab"
+      data-bs-toggle="tab"
+      data-bs-target="#seller"
+      type="button"
+      role="tab"
+      aria-selected="{{ 'true' if review_type=='seller' else 'false' }}"
+    >Seller Reviews</button>
   </li>
 </ul>
 
-<!-- Tab Content -->
-<div class="tab-content container border border-top-0 p-3" id="reviewTabsContent">
-  <!-- Product Reviews Tab -->
-  <div class="tab-pane fade show active" id="product" role="tabpanel" aria-labelledby="product-tab">
+<div class="tab-content mt-3" id="reviewTabsContent">
+  <!-- ▶ Product Reviews Pane -->
+  <div class="tab-pane fade {% if review_type=='product' %}show active{% endif %}"
+       id="product" role="tabpanel">
     <table class="table table-hover table-bordered">
-      <thead class="thead-dark">
+      <thead class="table-dark">
         <tr>
           <th>Product Name</th>
           <th>Date</th>
           <th>Rating (/5)</th>
           <th>Seller</th>
           <th>Review</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -41,21 +52,36 @@
           <td>{{ r.rating }}</td>
           <td>{{ r.seller_name }}</td>
           <td>{{ r.review_text }}</td>
+          <td>
+            <a href="{{ url_for('review.edit_product_review', review_id=r.review_id) }}"
+               class="btn btn-sm btn-primary">Edit</a>
+            <form method="POST"
+                  action="{{ url_for('review.delete_product_review', review_id=r.review_id) }}"
+                  style="display:inline-block;">
+              <button
+                type="submit"
+                class="btn btn-sm btn-danger"
+                onclick="return confirm('Delete this review?');"
+              >Delete</button>
+            </form>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 
-  <!-- Seller Reviews Tab -->
-  <div class="tab-pane fade" id="seller" role="tabpanel" aria-labelledby="seller-tab">
+  <!-- ▶ Seller Reviews Pane -->
+  <div class="tab-pane fade {% if review_type=='seller' %}show active{% endif %}"
+       id="seller" role="tabpanel">
     <table class="table table-hover table-bordered">
-      <thead class="thead-dark">
+      <thead class="table-dark">
         <tr>
           <th>Seller</th>
           <th>Date</th>
           <th>Rating (/5)</th>
           <th>Review</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -65,6 +91,19 @@
           <td>{{ r.created_at.strftime('%-m/%-d/%Y') }}</td>
           <td>{{ r.rating }}</td>
           <td>{{ r.review_text }}</td>
+          <td>
+            <a href="{{ url_for('review.edit_seller_review', seller_review_id=r.seller_review_id) }}"
+               class="btn btn-sm btn-primary">Edit</a>
+            <form method="POST"
+                  action="{{ url_for('review.delete_seller_review', seller_review_id=r.seller_review_id) }}"
+                  style="display:inline-block;">
+              <button
+                type="submit"
+                class="btn btn-sm btn-danger"
+                onclick="return confirm('Delete this review?');"
+              >Delete</button>
+            </form>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -72,16 +111,9 @@
   </div>
 </div>
 
-<!-- Optional: Initialize Bootstrap Tabs if not automatically activated -->
+<!-- Optional: make sure the proper tab is shown on page load -->
 <script>
-  var triggerTabList = [].slice.call(document.querySelectorAll('#reviewTabs button'))
-  triggerTabList.forEach(function (triggerEl) {
-    var tabTrigger = new bootstrap.Tab(triggerEl)
-    triggerEl.addEventListener('click', function (event) {
-      event.preventDefault()
-      tabTrigger.show()
-    })
-  })
+  var triggerEl = document.querySelector('#{{ review_type }}-tab');
+  if (triggerEl) new bootstrap.Tab(triggerEl).show();
 </script>
-
 {% endblock %}

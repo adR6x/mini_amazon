@@ -1,8 +1,13 @@
+DELETE FROM Order_Items;
+DELETE FROM Orders;
+DELETE FROM Cart_Items;
+DELETE FROM Carts;
+DELETE FROM Product_Reviews;
+DELETE FROM Seller_Reviews;
+DELETE FROM Inventory;
 DELETE FROM Products;
 DELETE FROM Categories;
 DELETE FROM Users;
-DELETE FROM Product_Reviews;
-DELETE FROM Seller_Reviews;
 
 \COPY Users FROM 'Users.csv' WITH DELIMITER ',' NULL '' CSV
 -- since id is auto-generated; we need the next command to adjust the counter
@@ -16,16 +21,32 @@ SELECT pg_catalog.setval('public.users_id_seq',
 
 -- Load products next
 \COPY Products FROM 'Products.csv' WITH DELIMITER ',' NULL '' CSV;
+-- Reset Products sequence
+SELECT pg_catalog.setval('public.products_product_id_seq',
+                         (SELECT MAX(product_id)+1 FROM Products),
+                         false);
 
 \COPY Product_Reviews FROM 'ProductReviews.csv' WITH DELIMITER ',' NULL '' CSV;
 
 \COPY Seller_Reviews FROM 'SellerReviews.csv' WITH DELIMITER ',' NULL '' CSV;
 
 \COPY Inventory FROM 'Inventory.csv' WITH DELIMITER ',' NULL '' CSV;
+-- Reset Inventory sequence
+SELECT pg_catalog.setval('public.inventory_id_seq',
+                         (SELECT MAX(id)+1 FROM Inventory),
+                         false);
 
 \COPY Orders FROM 'Orders.csv' WITH DELIMITER ',' NULL '' CSV;
+-- Reset Orders sequence
+SELECT pg_catalog.setval('public.orders_order_id_seq',
+                         (SELECT MAX(order_id)+1 FROM Orders),
+                         false);
 
 \COPY Order_Items FROM 'Order_Items.csv' WITH DELIMITER ',' NULL '' CSV;
+-- Reset Order_Items sequence
+SELECT pg_catalog.setval('public.order_items_order_item_id_seq',
+                         (SELECT MAX(order_item_id)+1 FROM Order_Items),
+                         false);
 
 -- No need to reset identity sequence manually if using GENERATED AS IDENTITY
 

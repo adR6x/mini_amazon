@@ -1,4 +1,6 @@
 from flask import current_app as app
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from datetime import datetime
 
 class ProductReview:
@@ -44,17 +46,46 @@ class ProductReview:
         return [ProductReview(*row) for row in rows]
 
     @staticmethod
+    def _sync_review_seq():
+        # Make sure the sequence is set to max(review_id)+1
+        sync_sql = """
+            SELECT setval(
+              'product_reviews_review_id_seq',
+              (SELECT COALESCE(MAX(review_id), 0) FROM Product_Reviews) + 1,
+              false
+            )
+        """
+        app.db.execute(sync_sql)
+        
+    @staticmethod
     def create(product_id, reviewer_id, rating, review_text=None, image_url=None):
-        rows = app.db.execute('''
-            INSERT INTO Product_Reviews (product_id, reviewer_id, rating, review_text, image_url)
-            VALUES (:product_id, :reviewer_id, :rating, :review_text, :image_url)
-            RETURNING review_id, product_id, reviewer_id, rating, review_text, image_url, created_at, updated_at
-        ''',
-        product_id=product_id,
-        reviewer_id=reviewer_id,
-        rating=rating,
-        review_text=review_text,
-        image_url=image_url)
+        insert_sql = """
+            INSERT INTO Product_Reviews
+              (product_id, reviewer_id, rating, review_text, image_url)
+            VALUES
+              (:product_id, :reviewer_id, :rating, :review_text, :image_url)
+            RETURNING
+              review_id, product_id, reviewer_id,
+              rating, review_text, image_url, created_at, updated_at
+        """
+        params = {
+            "product_id":  product_id,
+            "reviewer_id": reviewer_id,
+            "rating":      rating,
+            "review_text": review_text,
+            "image_url":   image_url
+        }
+
+        # 1) ensure the sequence is ahead of any existing IDs
+        ProductReview._sync_review_seq()
+
+        try:
+            # unpack params as keywords, not as a single positional dict
+            rows = app.db.execute(insert_sql, **params)
+        except IntegrityError:
+            # 2) if it somehow still collides, sync again and retry once
+            ProductReview._sync_review_seq()
+            rows = app.db.execute(insert_sql, **params)
 
         return ProductReview(*rows[0]) if rows else None
 
@@ -82,3 +113,25 @@ class ProductReview:
             DELETE FROM Product_Reviews
             WHERE review_id = :review_id
         ''', review_id=review_id)
+
+    @staticmethod
+    def get_by_id(review_id):
+        rows = app.db.execute('''
+            SELECT pr.review_id, pr.product_id, pr.reviewer_id, pr.rating,
+                   pr.review_text, pr.image_url, pr.created_at, pr.updated_at,
+                   p.name AS product_name,
+                   u.firstname || ' ' || u.lastname AS seller_name
+            FROM Product_Reviews pr
+            JOIN Products p ON pr.product_id = p.product_id
+            JOIN Users u ON p.seller_id = u.id
+            WHERE pr.review_id = :review_id
+        ''', review_id=review_id)
+        return ProductReview(*rows[0]) if rows else None
+
+    @staticmethod
+    def get_by_user_and_product(user_id, product_id):
+        rows = app.db.execute('''
+        SELECT * FROM Product_Reviews
+        WHERE reviewer_id=:user_id AND product_id=:product_id
+        ''', user_id=user_id, product_id=product_id)
+        return ProductReview(*rows[0]) if rows else None
