@@ -78,3 +78,16 @@ class SellerReview:
             DELETE FROM Seller_Reviews
             WHERE seller_review_id = :seller_review_id
         ''', seller_review_id=seller_review_id)
+
+    @staticmethod
+    def get_by_id(seller_review_id):
+        rows = app.db.execute('''
+            SELECT sr.seller_review_id, sr.seller_id, sr.reviewer_id, sr.rating,
+                   sr.review_text, sr.image_url, sr.created_at, sr.updated_at,
+                   u.firstname || ' ' || u.lastname AS seller_name
+            FROM Seller_Reviews sr
+            JOIN Users u ON sr.seller_id = u.id
+            WHERE sr.seller_review_id = :seller_review_id
+        ''', seller_review_id=seller_review_id)
+        return SellerReview(*rows[0]) if rows else None
+
