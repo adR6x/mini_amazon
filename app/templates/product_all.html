@@ -1,4 +1,5 @@
-{% extends "base.html" %} {% block content %}
+{% extends "base.html" %}
+{% block content %}
 
 <br /><br />
 
@@ -37,7 +38,7 @@
         <div class="form-group">
           <label for="most_exp">{{ form.most_exp.label }}</label>
           {{ form.most_exp(class="form-control", placeholder="Give a number!") }}
-      </div>
+        </div>
 
         <div class="form-group">{{ form.submit(class="btn btn-primary") }}</div>
       </form>
@@ -58,63 +59,58 @@
       </div>
       
       <section class="product-list">
-        <h2>{{page_heading}}</h2>
-        <div id="product-container">
-          {% for product in avail_products %}
-          <div class="product" 
-               data-price="{{ product.price }}" 
-               data-rating="{{ product.avg_rating|default(0) }}">
-            <img src={{product.image_url}} alt="Product Image" />
-            <div class="product-info">
-              <h3 class="product-title">{{ product.name }}</h3>
-              <p class="product-description">{{ product.description }}</p>
-              <div class="price-review">
-                <p class="price">${{ product.price }}</p>
-                <p class="avg_rating">{{ product.avg_rating|default(0) }}</p>
-                <p class="rating_stars">&#9733;&#9733;&#9733;&#9733;&#9734;</p>
-                <p class="total_rating">(999+)</p>
-              </div>
-              <div class="cart-actions">
-                <input type="number" value="1" min="1" class="quantity-input" />
-                <button class="add-to-cart"
-                        data-product-id="{{ product.id }}"
-                        data-unit-price="{{ product.price }}">
-                  Add to Cart
-                </button>
-              </div>
+        <h2>All Products</h2>
+        {% for product in avail_products %}
+        <div class="product">
+          <!-- ◀ WRAPPED IN A LINK TO DETAIL ▶ -->
+          <a href="{{ url_for('product.detail', product_id=product.id) }}">
+            <img
+              src="{{ url_for('static', filename='images/placeholder.png') }}"
+              alt="Product Image"
+            />
+            <h3 class="product-title">{{ product.name }}</h3>
+          </a>
+
+          <div class="product-info">
+            <p class="product-description">{{ product.description }}</p>
+            <p class="price">${{ product.price }}</p>
+            <div class="cart-actions">
+              <input type="number" value="1" min="1" class="quantity-input" />
+              <button
+                class="add-to-cart"
+                data-product-id="{{ product.id }}"
+                data-unit-price="{{ product.price }}"
+              >
+                Add to Cart
+              </button>
             </div>
           </div>
-          {% endfor %}
         </div>
+        {% endfor %}
       </section>
     </main>
   </div>
 
-  <!-- Add JavaScript for AJAX -->
+  <!-- Add JavaScript for AJAX (unchanged) -->
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const addToCartButtons = document.querySelectorAll(".add-to-cart");
 
       addToCartButtons.forEach((button) => {
         button.addEventListener("click", async (event) => {
-          event.preventDefault(); // Prevent default behavior
-
+          event.preventDefault();
           const productId = button.getAttribute("data-product-id");
           const unitPrice = button.getAttribute("data-unit-price");
           const quantityInput =
             button.parentElement.querySelector(".quantity-input");
           const quantity = quantityInput ? quantityInput.value : 1;
 
-          console.log(
-            `Adding to cart: product_id=${productId}, quantity=${quantity}, unit_price=${unitPrice}`
-          );
-
           try {
             const response = await fetch("/add_to_cart", {
               method: "POST",
               headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
-                "X-Requested-With": "XMLHttpRequest", // Important for AJAX detection
+                "X-Requested-With": "XMLHttpRequest",
               },
               body: new URLSearchParams({
                 product_id: productId,
@@ -123,28 +119,15 @@
               }),
             });
 
-            console.log("Response status:", response.status);
-
             if (response.ok) {
               const result = await response.json();
-              console.log("Response data:", result);
-
-              if (result.success) {
-                alert(result.message);
-              } else {
-                alert(result.message || "Failed to add item to cart.");
-              }
+              alert(result.message);
             } else {
               const errorText = await response.text();
-              console.error("Server error:", response.status, errorText);
-              alert(`Server error (${response.status}): Please try again.`);
+              alert(`Server error (${response.status}): ${errorText}`);
             }
           } catch (error) {
-            console.error("Error adding to cart:", error);
-            alert(
-              "An error occurred while adding the item to the cart: " +
-                error.message
-            );
+            alert("An error occurred: " + error.message);
           }
         });
       });
