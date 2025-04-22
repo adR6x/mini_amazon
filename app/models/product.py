@@ -1,29 +1,4 @@
 from flask import current_app as app
-import requests
-from bs4 import BeautifulSoup
-
-# Helper to fetch a 200x200 image URL from Bing Images
-def get_bing_square_image(query):
-    search_url = f"https://www.bing.com/images/search?q={query}&qft=+filterui:imagesize-custom_200_200&form=HDRSC2"
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/110.0.0.0 Safari/537.36"
-        )
-    }
-
-    response = requests.get(search_url, headers=headers)
-    if response.status_code != 200:
-        return "Failed to fetch results"
-
-    soup = BeautifulSoup(response.text, "html.parser")
-    img_tags = soup.select("img.mimg")
-
-    if img_tags:
-        return img_tags[0].get("src")
-    return "No image found"
-
 
 class Product:
     def __init__(
@@ -204,53 +179,72 @@ LIMIT 5
 
     @staticmethod
     def get_by_search(query):
-        rows = app.db.execute('''
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-SET pg_trgm.similarity_threshold = 0.2;
-SELECT
-  p.product_id       AS id,
-  p.name,
-  p.price,
-  p.description,
-  p.image_url,
-  p.seller_id,
-  p.category_id,
-  pr_agg.number_of_reviews,
-  pr_agg.average_rating,
-  GREATEST(
-    similarity(p.name::TEXT,    CAST(:query AS TEXT)),
-    similarity(p.description,   CAST(:query AS TEXT)),
-    similarity(u.firstname,     CAST(:query AS TEXT)),
-    similarity(u.lastname,      CAST(:query AS TEXT)),
-    similarity(u.address,       CAST(:query AS TEXT)),
-    similarity(c.name,          CAST(:query AS TEXT)),
-    similarity(c.description,   CAST(:query AS TEXT))
-  ) AS rank
-FROM Products p
-LEFT JOIN users u
-  ON p.seller_id = u.id
-LEFT JOIN categories c
-  ON p.category_id = c.category_id
-LEFT JOIN LATERAL (
-  SELECT
-    COUNT(*)               AS number_of_reviews,
-    COALESCE(AVG(rating),0) AS average_rating
-  FROM Product_Reviews pr
-  WHERE pr.product_id = p.product_id
-) pr_agg ON true
-WHERE
-  p.name        % :query OR
-  p.description % :query OR
-  u.firstname   % :query OR
-  u.lastname    % :query OR
-  u.address     % :query OR
-  c.name        % :query OR
-  c.description % :query
-ORDER BY rank DESC
-LIMIT 5;
-''', query=str(query))
-        return [Product(*row) for row in rows]
+      rows = app.db.execute(
+          '''
+          CREATE EXTENSION IF NOT EXISTS pg_trgm;
+          SET pg_trgm.similarity_threshold = 0.2;
+          SELECT
+            p.product_id       AS id,
+            p.name,
+            p.price,
+            p.description,
+            p.image_url,
+            p.seller_id,
+            p.category_id,
+            pr_agg.number_of_reviews,
+            pr_agg.average_rating,
+            GREATEST(
+              similarity(p.name::TEXT,    CAST(:query AS TEXT)),
+              similarity(p.description,   CAST(:query AS TEXT)),
+              similarity(u.firstname,     CAST(:query AS TEXT)),
+              similarity(u.lastname,      CAST(:query AS TEXT)),
+              similarity(u.address,       CAST(:query AS TEXT)),
+              similarity(c.name,          CAST(:query AS TEXT)),
+              similarity(c.description,   CAST(:query AS TEXT))
+            ) AS rank
+          FROM Products p
+          LEFT JOIN users u
+            ON p.seller_id = u.id
+          LEFT JOIN categories c
+            ON p.category_id = c.category_id
+          LEFT JOIN LATERAL (
+            SELECT
+              COUNT(*)                AS number_of_reviews,
+              COALESCE(AVG(rating),0) AS average_rating
+            FROM Product_Reviews pr
+            WHERE pr.product_id = p.product_id
+          ) pr_agg ON true
+          WHERE
+            p.name        % :query OR
+            p.description % :query OR
+            u.firstname   % :query OR
+            u.lastname    % :query OR
+            u.address     % :query OR
+            c.name        % :query OR
+            c.description % :query
+          ORDER BY rank DESC
+          LIMIT 5;
+          ''',
+          query=str(query)
+      )
 
+      products = []
+      for row in rows:
+          # row[0]–row[8] map to Product fields; row[9] is rank, so we ignore it
+          product = Product(
+              id=row[0],
+              name=row[1],
+              price=row[2],
+              description=row[3],
+              image_url=row[4],
+              seller_id=row[5],
+              category_id=row[6],
+              number_of_reviews=row[7],
+              average_rating=row[8]
+          )
+          products.append(product)
+
+      return products
 
 class Category:
     def __init__(self, id, name, description=None):

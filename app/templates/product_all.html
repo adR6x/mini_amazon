@@ -58,23 +58,23 @@
         <button id="sort-review">Review ▲▼</button>
       </div>
       
-      <section class="product-list">
+      <section id="product-container" class="product-list">
         <h2>All Products</h2>
         {% for product in avail_products %}
-        <div class="product">
-          <!-- ◀ WRAPPED IN A LINK TO DETAIL ▶ -->
+        <div
+          class="product"
+          data-price="{{ product.price }}"
+          data-rating="{{ product.average_rating }}"
+        >
           <a href="{{ url_for('product.detail', product_id=product.id) }}">
-            <img
-              src="{{ url_for('static', filename='images/placeholder.png') }}"
-              alt="Product Image"
-            />
-            <h3 class="product-title">{{ product.name }}</h3>
+            <img src="{{ product.image_url }}" alt="Product Image" />
           </a>
-
           <div class="product-info">
+            <a href="{{ url_for('product.detail', product_id=product.id) }}">
+              <p class="product-title">{{ product.name }}</p>
+            </a>
             <p class="product-description">{{ product.description }}</p>
             <p class="price">${{ product.price }}</p>
-          
             <div class="rating">
               <span class="rating_stars">
                 {%- set rating = product.average_rating|default(0) -%}
@@ -87,7 +87,6 @@
               </span>
               <span class="total_rating">({{ product.number_of_reviews|default(0) }})</span>
             </div>
-          
             <div class="cart-actions">
               <input type="number" value="1" min="1" class="quantity-input" />
               <button
@@ -105,75 +104,49 @@
     </main>
   </div>
 
-  <!-- Add JavaScript for AJAX -->
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const addToCartButtons = document.querySelectorAll(".add-to-cart");
-
-      addToCartButtons.forEach((button) => {
-        button.addEventListener("click", async (event) => {
-          event.preventDefault();
-          const productId = button.getAttribute("data-product-id");
-          const unitPrice = button.getAttribute("data-unit-price");
-          const quantityInput =
-            button.parentElement.querySelector(".quantity-input");
-          const quantity = quantityInput ? quantityInput.value : 1;
-
+      // Add to cart
+      document.querySelectorAll(".add-to-cart").forEach(button => {
+        button.addEventListener("click", async e => {
+          e.preventDefault();
+          const pid = button.dataset.productId;
+          const price = button.dataset.unitPrice;
+          const qty = button.closest(".cart-actions").querySelector(".quantity-input").value || 1;
           try {
-            const response = await fetch("/add_to_cart", {
+            const res = await fetch("/add_to_cart", {
               method: "POST",
               headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
                 "X-Requested-With": "XMLHttpRequest",
               },
-              body: new URLSearchParams({
-                product_id: productId,
-                quantity: quantity,
-                unit_price: unitPrice,
-              }),
+              body: new URLSearchParams({ product_id: pid, quantity: qty, unit_price: price })
             });
-
-            if (response.ok) {
-              const result = await response.json();
-              alert(result.message);
-            } else {
-              const errorText = await response.text();
-              alert(`Server error (${response.status}): ${errorText}`);
-            }
-          } catch (error) {
-            alert("An error occurred: " + error.message);
+            const txt = res.ok ? (await res.json()).message : `Server error (${res.status})`;
+            alert(txt);
+          } catch (err) {
+            alert("Error: " + err.message);
           }
         });
       });
+
+      // Sorting
+      const container = document.getElementById("product-container");
+      let priceAsc = true, reviewAsc = true;
+      function sortBy(key, asc) {
+        Array.from(container.querySelectorAll(".product"))
+          .sort((a, b) => {
+            const av = parseFloat(a.dataset[key]) || 0;
+            const bv = parseFloat(b.dataset[key]) || 0;
+            return asc ? av - bv : bv - av;
+          })
+          .forEach(el => container.appendChild(el));
+      }
+      document.getElementById("sort-price")
+        .addEventListener("click", () => { sortBy("price", priceAsc); priceAsc = !priceAsc; });
+      document.getElementById("sort-review")
+        .addEventListener("click", () => { sortBy("rating", reviewAsc); reviewAsc = !reviewAsc; });
     });
-
-    let priceAsc = true;
-    let reviewAsc = false;
-
-    const container = document.getElementById("product-container");
-
-    function sortProducts(key, ascending) {
-      const products = Array.from(container.getElementsByClassName("product"));
-
-      products.sort((a, b) => {
-        const aVal = parseFloat(a.dataset[key]);
-        const bVal = parseFloat(b.dataset[key]);
-        return ascending ? aVal - bVal : bVal - aVal;
-      });
-
-      products.forEach(product => container.appendChild(product));
-    }
-
-    document.getElementById("sort-price").addEventListener("click", () => {
-      sortProducts("price", priceAsc);
-      priceAsc = !priceAsc;
-    });
-
-    document.getElementById("sort-review").addEventListener("click", () => {
-      sortProducts("rating", reviewAsc);
-      reviewAsc = !reviewAsc;
-    });
-
   </script>
 </body>
 {% endblock %}
