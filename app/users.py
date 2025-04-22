@@ -6,6 +6,7 @@ from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo
 from flask_login import login_required
 from .models.purchase import Purchase 
+from .models.carts import Cart
 from flask import current_app as app
 from werkzeug.security import generate_password_hash
 
@@ -81,13 +82,26 @@ def logout():
 @bp.route('/purchases')
 @login_required
 def purchases():
-    # Fetch all purchases for the logged-in user
-    #user_purchases = Purchase.get_all_purchases_by_user(current_user.id)
-    #return render_template('purchases.html', purchases=user_purchases)
-    user_orders = Purchase.get_orders_summary_by_user(current_user.id)
-    return render_template('purchases.html', orders=user_orders)
+    # Get pagination parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
     
+    # Validate and constrain per_page to allowed values
+    allowed_per_page = [10, 15]
+    if per_page not in allowed_per_page:
+        per_page = 10
     
+    # Fetch paginated purchases for the logged-in user
+    result = Purchase.get_orders_summary_by_user(current_user.id, page, per_page)
+    
+    return render_template('purchases.html',
+                         orders=result['orders'],
+                         current_page=result['current_page'],
+                         total_pages=result['total_pages'],
+                         per_page=result['per_page'],
+                         total_count=result['total_count'],
+                         allowed_per_page=allowed_per_page)
+
 
 @bp.route('/account', methods=['GET', 'POST'])
 @login_required
@@ -195,5 +209,61 @@ def public_profile(user_id):
 @login_required
 def orders():
     """Route for viewing orders where the user is the seller."""
-    seller_orders = Purchase.get_seller_orders(current_user.id)
-    return render_template('orders.html', orders=seller_orders)
+    # Get pagination parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    
+    # Validate and constrain per_page to allowed values
+    allowed_per_page = [10, 15]
+    if per_page not in allowed_per_page:
+        per_page = 10
+    
+    # Fetch paginated orders for the logged-in seller
+    result = Purchase.get_seller_orders(current_user.id, page, per_page)
+    
+    return render_template('orders.html',
+                         orders=result['orders'],
+                         current_page=result['current_page'],
+                         total_pages=result['total_pages'],
+                         per_page=per_page,
+                         total_count=result['total_count'],
+                         allowed_per_page=allowed_per_page)
+
+@bp.route('/purchases/<int:order_id>')
+@login_required
+def purchase_details(order_id):
+    """View detailed information about a specific purchase."""
+    details = Purchase.get_purchase_details(order_id, current_user.id)
+    if not details:
+        flash('Purchase not found or unauthorized.', 'danger')
+        return redirect(url_for('users.purchases'))
+    return render_template('purchase_details.html', details=details)
+
+@bp.route('/orders/<int:order_id>')
+@login_required
+def order_details(order_id):
+    """View detailed information about a specific order for seller's products."""
+    # Force a fresh fetch of the order details
+    details = Purchase.get_order_details(order_id, current_user.id)
+    if not details:
+        flash('Order not found or unauthorized.', 'danger')
+        return redirect(url_for('users.orders'))
+    return render_template('order_details.html', details=details)
+
+@bp.route('/orders/<int:order_id>/fulfill', methods=['POST'])
+@login_required
+def fulfill_order(order_id):
+    """Update the fulfillment status of an order item."""
+    order_item_id = request.form.get('order_item_id')
+    fulfillment_status = request.form.get('fulfillment_status')
+    
+    if not order_item_id or not fulfillment_status or fulfillment_status not in ['pending', 'fulfilled']:
+        flash('Invalid request.', 'danger')
+        return redirect(url_for('users.order_details', order_id=order_id))
+    
+    result = Cart.fulfill_order_item(order_item_id, current_user.id, fulfillment_status)
+    if result['success']:
+        flash(f'Order status updated to {fulfillment_status}.', 'success')
+    else:
+        flash(result['message'], 'danger')
+    return redirect(url_for('users.order_details', order_id=order_id))

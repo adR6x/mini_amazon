@@ -39,28 +39,27 @@ class Cart:
                 if not cart:
                     return None
 
-            # If seller_id is provided, include it in the query
-            if seller_id:
-                rows = app.db.execute('''
-                    INSERT INTO Cart_Items (cart_id, product_id, seller_id, quantity, unit_price)
-                    VALUES (:cart_id, :product_id, :seller_id, :quantity, :unit_price)
-                    ON CONFLICT (cart_id, product_id) DO UPDATE
-                    SET quantity = Cart_Items.quantity + :quantity,
-                        unit_price = :unit_price
-                    RETURNING cart_item_id
-                ''', cart_id=cart.cart_id, product_id=product_id, seller_id=seller_id,
-                                      quantity=quantity, unit_price=unit_price)
-            else:
-                # If seller_id is not provided, omit it from the query
-                rows = app.db.execute('''
-                    INSERT INTO Cart_Items (cart_id, product_id, quantity, unit_price)
-                    VALUES (:cart_id, :product_id, :quantity, :unit_price)
-                    ON CONFLICT (cart_id, product_id) DO UPDATE
-                    SET quantity = Cart_Items.quantity + :quantity,
-                        unit_price = :unit_price
-                    RETURNING cart_item_id
-                ''', cart_id=cart.cart_id, product_id=product_id,
-                                      quantity=quantity, unit_price=unit_price)
+            # Get the seller_id from the Products table if not provided
+            if seller_id is None:
+                seller = app.db.execute('''
+                    SELECT seller_id
+                    FROM Products
+                    WHERE product_id = :product_id
+                ''', product_id=product_id)
+                if not seller:
+                    return None
+                seller_id = seller[0][0]
+
+            # Add item to cart with seller_id
+            rows = app.db.execute('''
+                INSERT INTO Cart_Items (cart_id, product_id, seller_id, quantity, unit_price)
+                VALUES (:cart_id, :product_id, :seller_id, :quantity, :unit_price)
+                ON CONFLICT (cart_id, product_id) DO UPDATE
+                SET quantity = Cart_Items.quantity + :quantity,
+                    unit_price = :unit_price
+                RETURNING cart_item_id
+            ''', cart_id=cart.cart_id, product_id=product_id, seller_id=seller_id,
+                              quantity=quantity, unit_price=unit_price)
 
             return rows[0][0] if rows else None
         except Exception as e:
@@ -147,12 +146,12 @@ class Cart:
                         p.name AS product_name,
                         ci.quantity,
                         ci.unit_price,
-                        i.seller_id,
+                        ci.seller_id,
                         i.quantity_available
                     FROM Cart_Items ci
                     JOIN Carts c ON ci.cart_id = c.cart_id
                     JOIN Products p ON ci.product_id = p.product_id
-                    JOIN Inventory i ON ci.product_id = i.product_id
+                    JOIN Inventory i ON ci.product_id = i.product_id AND ci.seller_id = i.seller_id
                     WHERE c.user_id = :user_id
                 '''), {'user_id': user_id}).fetchall()
                 print(f"Found {len(cart_items) if cart_items else 0} items with inventory")
@@ -267,54 +266,66 @@ class Cart:
             return {'success': False, 'message': f'An error occurred during checkout: {str(e)}'}
 
     @staticmethod
-    def fulfill_order_item(order_item_id, seller_id):
-        """Fulfill a single order item and update order status if all items are fulfilled."""
+    def fulfill_order_item(order_item_id, seller_id, fulfillment_status='fulfilled'):
+        """Update the fulfillment status of an order item."""
         try:
-            with app.db.engine.begin() as conn:
-                # First verify the seller owns this order item
-                order_item = conn.execute(text('''
-                    SELECT oi.order_id, oi.fulfillment_status
-                    FROM Order_Items oi
-                    WHERE oi.order_item_id = :order_item_id AND oi.seller_id = :seller_id
-                '''), {
-                    'order_item_id': order_item_id,
-                    'seller_id': seller_id
-                }).fetchone()
-
-                if not order_item:
-                    return {'success': False, 'message': 'Order item not found or unauthorized.'}
-
-                if order_item.fulfillment_status == 'fulfilled':
-                    return {'success': False, 'message': 'Order item already fulfilled.'}
-
-                # Update the order item status
-                conn.execute(text('''
-                    UPDATE Order_Items
-                    SET fulfillment_status = 'fulfilled',
-                        fulfilled_at = CURRENT_TIMESTAMP
-                    WHERE order_item_id = :order_item_id
-                '''), {'order_item_id': order_item_id})
-
-                # Check if all items in the order are fulfilled
-                pending_items = conn.execute(text('''
-                    SELECT COUNT(*) as pending_count
-                    FROM Order_Items
-                    WHERE order_id = :order_id AND fulfillment_status = 'pending'
-                '''), {'order_id': order_item.order_id}).fetchone()
-
-                if pending_items.pending_count == 0:
-                    # All items are fulfilled, update order status
-                    conn.execute(text('''
-                        UPDATE Orders
-                        SET fulfillment_status = 'fulfilled'
-                        WHERE order_id = :order_id
-                    '''), {'order_id': order_item.order_id})
-
-                return {'success': True, 'message': 'Order item fulfilled successfully.'}
-
+            # Verify the status is one of the allowed values
+            allowed_statuses = ['pending', 'fulfilled']
+            if fulfillment_status not in allowed_statuses:
+                return {'success': False, 'message': 'Invalid fulfillment status.'}
+            
+            # Verify the order item belongs to the seller
+            result = app.db.execute('''
+                SELECT oi.order_id FROM Order_Items oi
+                WHERE oi.order_item_id = :order_item_id
+                AND oi.seller_id = :seller_id
+            ''', order_item_id=order_item_id, seller_id=seller_id)
+            
+            if not result:
+                return {'success': False, 'message': 'Order item not found or unauthorized.'}
+            
+            order_id = result[0][0]
+            
+            # Update the fulfillment status
+            app.db.execute('''
+                UPDATE Order_Items
+                SET fulfillment_status = :fulfillment_status,
+                    fulfilled_at = CASE 
+                        WHEN :fulfillment_status = 'fulfilled' THEN CURRENT_TIMESTAMP
+                        ELSE fulfilled_at
+                    END
+                WHERE order_item_id = :order_item_id
+            ''', order_item_id=order_item_id, fulfillment_status=fulfillment_status)
+            
+            # Check all order items' status
+            status_result = app.db.execute('''
+                SELECT 
+                    COUNT(*) as total_items,
+                    COUNT(CASE WHEN fulfillment_status = 'fulfilled' THEN 1 END) as fulfilled_items,
+                    COUNT(CASE WHEN fulfillment_status = 'pending' THEN 1 END) as pending_items
+                FROM Order_Items
+                WHERE order_id = :order_id
+            ''', order_id=order_id)
+            
+            total_items, fulfilled_items, pending_items = status_result[0]
+            
+            # Update order status based on all items
+            if pending_items > 0:
+                new_status = 'pending'
+            elif fulfilled_items == total_items:
+                new_status = 'fulfilled'
+            else:
+                new_status = 'partial'
+            
+            app.db.execute('''
+                UPDATE Orders
+                SET fulfillment_status = :new_status
+                WHERE order_id = :order_id
+            ''', order_id=order_id, new_status=new_status)
+            
+            return {'success': True, 'message': 'Order status updated successfully.'}
         except Exception as e:
-            print(f"Error in fulfill_order_item: {str(e)}")
-            return {'success': False, 'message': f'Error fulfilling order item: {str(e)}'}
+            return {'success': False, 'message': f'Error updating order status: {str(e)}'}
 
     @staticmethod
     def get_order_status(order_id, user_id):
@@ -369,3 +380,18 @@ class Cart:
         except Exception as e:
             print(f"Error in get_order_status: {str(e)}")
             return {'success': False, 'message': f'Error getting order status: {str(e)}'}
+
+    @staticmethod
+    def get_user_address(user_id):
+        """Get a user's address from the database."""
+        try:
+            result = app.db.execute('''
+                SELECT address
+                FROM Users
+                WHERE id = :user_id
+            ''', user_id=user_id)
+            
+            return result[0][0] if result else None
+        except Exception as e:
+            print(f"Error getting user address: {str(e)}")
+            return None
