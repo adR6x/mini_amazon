@@ -102,6 +102,11 @@ def account():
         new_balance = request.form.get('balance')
         new_balance = float(new_balance) if new_balance else 0.00
 
+        # Validation: prevent negative balance
+        if new_balance < 0:
+            flash("Balance cannot be negative.", "danger")
+            return redirect(url_for('users.account'))
+        
         # Update the user details in the database
         try:
             if new_password:
@@ -152,7 +157,7 @@ def account():
 @bp.route('/user/<int:user_id>')
 def public_profile(user_id):
     user = app.db.execute('''
-        SELECT id, firstname, lastname, email
+        SELECT id, firstname, lastname, email, address
         FROM Users
         WHERE id = :id
     ''', id=user_id)
@@ -161,5 +166,27 @@ def public_profile(user_id):
         flash("User not found.", "danger")
         return redirect(url_for('index'))  # or a 404 page
 
-    return render_template('public_profile.html', user=user[0])
+    user = user[0]
 
+    # Check if this user is a seller (has at least 1 product listed)
+    is_seller_result = app.db.execute('''
+        SELECT EXISTS (
+            SELECT 1 FROM Products WHERE seller_id = :id
+        ) AS is_seller
+    ''', id=user_id)
+
+    is_seller = bool(is_seller_result[0][0])
+
+
+    # Get seller reviews if seller
+    reviews = []
+    if is_seller:
+        reviews = app.db.execute('''
+            SELECT sr.rating, sr.review_text, sr.created_at, u.firstname, u.lastname
+            FROM seller_reviews sr
+            JOIN Users u ON sr.reviewer_id = u.id
+            WHERE sr.seller_id = :id
+        ''', id=user_id)
+
+
+    return render_template('public_profile.html', user=user, is_seller=is_seller, reviews=reviews)
