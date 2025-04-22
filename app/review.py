@@ -1,30 +1,59 @@
-from flask import render_template, request
+from flask import render_template, request, redirect, url_for, flash, abort
 from flask_login import current_user, login_required
-from flask import redirect, url_for, flash, abort
 from datetime import datetime
+from math import ceil
 
 from .models.product_review import ProductReview
 from .models.seller_review import SellerReview
-
 from flask import Blueprint
+
 bp = Blueprint('review', __name__, url_prefix='/reviews')
 
+class Pagination:
+    def __init__(self, items, page, per_page, total):
+        self.items = items
+        self.page = page
+        self.per_page = per_page
+        self.total = total
+        self.pages = ceil(total / per_page) if per_page else 0
 
 @bp.route('/', methods=['GET'])
 @login_required
 def review_history_all():
-    # Check which tab is active
-    review_type = request.args.get("review_type", "product")
+    review_type = request.args.get('review_type', 'product')
+    # Pagination parameters
+    try:
+        page = int(request.args.get('page', 1))
+    except ValueError:
+        page = 1
+    try:
+        per_page = int(request.args.get('per_page', 5))
+    except ValueError:
+        per_page = 5
+    per_page = per_page if per_page in (5, 10, 20) else 5
 
-    # Load both but only show one depending on tab (for fast switching)
-    product_reviews = ProductReview.get_by_user(current_user.id)
-    seller_reviews = SellerReview.get_by_user(current_user.id)
+    # Load all reviews
+    all_product = ProductReview.get_by_user(current_user.id)
+    all_seller = SellerReview.get_by_user(current_user.id)
 
-    return render_template('review_history_all.html',
-                           review_type=review_type,
-                           product_reviews=product_reviews,
-                           seller_reviews=seller_reviews)
-            
+    # Slice for pagination
+    def paginate_list(full_list):
+        total = len(full_list)
+        start = (page - 1) * per_page
+        end = start + per_page
+        items = full_list[start:end]
+        return Pagination(items, page, per_page, total)
+
+    product_reviews = paginate_list(all_product)
+    seller_reviews = paginate_list(all_seller)
+
+    return render_template(
+        'review_history_all.html',
+        review_type=review_type,
+        product_reviews=product_reviews,
+        seller_reviews=seller_reviews
+    )
+
 @bp.route('/product/<int:review_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_product_review(review_id):
@@ -49,7 +78,6 @@ def delete_product_review(review_id):
     flash('Product review deleted.', 'warning')
     return redirect(url_for('review.review_history_all', review_type='product'))
 
-
 @bp.route('/seller/<int:seller_review_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_seller_review(seller_review_id):
@@ -73,4 +101,3 @@ def delete_seller_review(seller_review_id):
     SellerReview.delete(seller_review_id)
     flash('Seller review deleted.', 'warning')
     return redirect(url_for('review.review_history_all', review_type='seller'))
-
