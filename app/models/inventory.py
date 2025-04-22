@@ -109,8 +109,8 @@ class Inventory:
     @staticmethod
     def add_inventory(seller_id, product_id, quantity_available, price):
         rows = app.db.execute('''
-            INSERT INTO Inventory (seller_id, product_id, quantity_available, price)
-            VALUES (:seller_id, :product_id, :quantity_available, :price)
+            INSERT INTO Inventory (id, seller_id, product_id, quantity_available, price)
+            VALUES (DEFAULT, :seller_id, :product_id, :quantity_available, :price)
             RETURNING id
         ''', seller_id=seller_id, product_id=product_id, quantity_available=quantity_available, price=price)
         return rows[0][0] if rows else None
