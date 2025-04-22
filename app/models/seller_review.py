@@ -18,26 +18,45 @@ class SellerReview:
     @staticmethod
     def get_by_seller(seller_id):
         rows = app.db.execute('''
-            SELECT sr.seller_review_id, sr.seller_id, sr.reviewer_id, sr.rating,
-                   sr.review_text, sr.image_url, sr.created_at, sr.updated_at,
-                   u.firstname || ' ' || u.lastname AS seller_name
+            SELECT
+                sr.seller_review_id,
+                sr.seller_id,
+                sr.reviewer_id,
+                sr.rating,
+                sr.review_text,
+                sr.image_url,
+                sr.created_at,
+                sr.updated_at,
+                u.firstname || ' ' || u.lastname AS seller_name
             FROM Seller_Reviews sr
             JOIN Users u ON sr.seller_id = u.id
             WHERE sr.seller_id = :seller_id
-        ''', seller_id=seller_id)
+            ORDER BY sr.created_at DESC
+        ''',
+        seller_id=seller_id)
         return [SellerReview(*row) for row in rows]
 
     @staticmethod
     def get_by_user(user_id):
         rows = app.db.execute('''
-            SELECT sr.seller_review_id, sr.seller_id, sr.reviewer_id, sr.rating,
-                   sr.review_text, sr.image_url, sr.created_at, sr.updated_at,
-                   u.firstname || ' ' || u.lastname AS seller_name
+            SELECT
+                sr.seller_review_id,
+                sr.seller_id,
+                sr.reviewer_id,
+                sr.rating,
+                sr.review_text,
+                sr.image_url,
+                sr.created_at,
+                sr.updated_at,
+                u.firstname || ' ' || u.lastname AS seller_name
             FROM Seller_Reviews sr
             JOIN Users u ON sr.seller_id = u.id
             WHERE sr.reviewer_id = :user_id
-        ''', user_id=user_id)
+            ORDER BY sr.created_at DESC
+        ''',
+        user_id=user_id)
         return [SellerReview(*row) for row in rows]
+
 
     @staticmethod
     def create(seller_id, reviewer_id, rating, review_text=None, image_url=None):
