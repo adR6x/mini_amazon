@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import current_user, login_required
 from app.models.carts import Cart
+import app.db
 
 cart = Blueprint('cart', __name__)
 
@@ -32,9 +33,13 @@ def cart_page():
             }
             enhanced_cart_items.append(item_dict)
 
+        # Get user's address
+        user_address = Cart.get_user_address(current_user.id)
+
         return render_template('cart.html',
                                cart_items=enhanced_cart_items,
-                               total_amount=round(total_amount, 2))
+                               total_amount=round(total_amount, 2),
+                               user_address=user_address)
     except Exception as e:
         import traceback
         print(f"Error in cart_page: {str(e)}")

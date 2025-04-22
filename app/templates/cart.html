@@ -102,8 +102,8 @@
   <div class="checkout-sidebar">
     <div class="delivery-address">
       <h3>Delivery Address:</h3>
-      {% if current_user.address %}
-      <p>{{ current_user.address }}</p>
+      {% if user_address %}
+      <p>{{ user_address }}</p>
       <a href="#" class="btn-change">Change</a>
       {% else %}
       <p>No address on file. Please add an address.</p>

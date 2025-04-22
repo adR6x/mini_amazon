@@ -71,7 +71,16 @@
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('users.purchases') }}"
+              <a
+                class="nav-link {% if request.endpoint == 'users.purchases' %}active{% endif %}"
+                href="{{ url_for('users.purchases') }}"
+                >My Purchases</a
+              >
+            </li>
+            <li class="nav-item">
+              <a
+                class="nav-link {% if request.endpoint == 'users.orders' %}active{% endif %}"
+                href="{{ url_for('users.orders') }}"
                 >Orders</a
               >
             </li>
@@ -142,5 +151,6 @@
 
     <!-- Bootstrap 5 Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
   </body>
 </html>
