@@ -26,9 +26,9 @@ SELECT pg_catalog.setval('public.products_product_id_seq',
                          (SELECT MAX(product_id)+1 FROM Products),
                          false);
 
-\COPY Product_Reviews FROM 'ProductReviews.csv' WITH DELIMITER ',' NULL '' CSV;
+\COPY Product_Reviews FROM 'Product_Reviews.csv' WITH DELIMITER ',' NULL '' CSV;
 
-\COPY Seller_Reviews FROM 'SellerReviews.csv' WITH DELIMITER ',' NULL '' CSV;
+\COPY Seller_Reviews FROM 'Seller_Reviews.csv' WITH DELIMITER ',' NULL '' CSV;
 
 \COPY Inventory FROM 'Inventory.csv' WITH DELIMITER ',' NULL '' CSV;
 -- Reset Inventory sequence
