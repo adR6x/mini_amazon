@@ -3,7 +3,6 @@
 <br><br>
 <h2>Reviews:</h2>
 
-<!-- Nav tabs forced horizontal with flex -->
 <ul class="nav nav-tabs d-flex" id="reviewTabs" role="tablist">
   <li class="nav-item" role="presentation">
     <button
@@ -33,6 +32,26 @@
   <!-- ▶ Product Reviews Pane -->
   <div class="tab-pane fade {% if review_type=='product' %}show active{% endif %}"
        id="product" role="tabpanel">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <form method="get" class="d-flex align-items-center">
+        <input type="hidden" name="review_type" value="product">
+        <label class="me-2 mb-0" for="prod-per-page">Per page:</label>
+        <select id="prod-per-page" name="per_page" class="form-select form-select-sm" onchange="this.form.submit()">
+          {% for n in [5,10,20] %}
+          <option value="{{ n }}" {% if product_reviews.per_page == n %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          {% for p in range(1, product_reviews.pages + 1) %}
+          <li class="page-item {% if product_reviews.page == p %}active{% endif %}">
+            <a class="page-link" href="?review_type=product&page={{ p }}&per_page={{ product_reviews.per_page }}">{{ p }}</a>
+          </li>
+          {% endfor %}
+        </ul>
+      </nav>
+    </div>
     <table class="table table-hover table-bordered">
       <thead class="table-dark">
         <tr>
@@ -45,7 +64,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for r in product_reviews %}
+        {% for r in product_reviews.items %}
         <tr>
           <td>{{ r.product_name }}</td>
           <td>{{ r.created_at.strftime('%-m/%-d/%Y') }}</td>
@@ -53,16 +72,9 @@
           <td>{{ r.seller_name }}</td>
           <td>{{ r.review_text }}</td>
           <td>
-            <a href="{{ url_for('review.edit_product_review', review_id=r.review_id) }}"
-               class="btn btn-sm btn-primary">Edit</a>
-            <form method="POST"
-                  action="{{ url_for('review.delete_product_review', review_id=r.review_id) }}"
-                  style="display:inline-block;">
-              <button
-                type="submit"
-                class="btn btn-sm btn-danger"
-                onclick="return confirm('Delete this review?');"
-              >Delete</button>
+            <a href="{{ url_for('review.edit_product_review', review_id=r.review_id) }}" class="btn btn-sm btn-primary">Edit</a>
+            <form method="post" action="{{ url_for('review.delete_product_review', review_id=r.review_id) }}" style="display:inline-block;">
+              <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this review?');">Delete</button>
             </form>
           </td>
         </tr>
@@ -74,6 +86,26 @@
   <!-- ▶ Seller Reviews Pane -->
   <div class="tab-pane fade {% if review_type=='seller' %}show active{% endif %}"
        id="seller" role="tabpanel">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <form method="get" class="d-flex align-items-center">
+        <input type="hidden" name="review_type" value="seller">
+        <label class="me-2 mb-0" for="sell-per-page">Per page:</label>
+        <select id="sell-per-page" name="per_page" class="form-select form-select-sm" onchange="this.form.submit()">
+          {% for n in [5,10,20] %}
+          <option value="{{ n }}" {% if seller_reviews.per_page == n %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          {% for p in range(1, seller_reviews.pages + 1) %}
+          <li class="page-item {% if seller_reviews.page == p %}active{% endif %}">
+            <a class="page-link" href="?review_type=seller&page={{ p }}&per_page={{ seller_reviews.per_page }}">{{ p }}</a>
+          </li>
+          {% endfor %}
+        </ul>
+      </nav>
+    </div>
     <table class="table table-hover table-bordered">
       <thead class="table-dark">
         <tr>
@@ -85,23 +117,16 @@
         </tr>
       </thead>
       <tbody>
-        {% for r in seller_reviews %}
+        {% for r in seller_reviews.items %}
         <tr>
           <td>{{ r.seller_name }}</td>
           <td>{{ r.created_at.strftime('%-m/%-d/%Y') }}</td>
           <td>{{ r.rating }}</td>
           <td>{{ r.review_text }}</td>
           <td>
-            <a href="{{ url_for('review.edit_seller_review', seller_review_id=r.seller_review_id) }}"
-               class="btn btn-sm btn-primary">Edit</a>
-            <form method="POST"
-                  action="{{ url_for('review.delete_seller_review', seller_review_id=r.seller_review_id) }}"
-                  style="display:inline-block;">
-              <button
-                type="submit"
-                class="btn btn-sm btn-danger"
-                onclick="return confirm('Delete this review?');"
-              >Delete</button>
+            <a href="{{ url_for('review.edit_seller_review', seller_review_id=r.seller_review_id) }}" class="btn btn-sm btn-primary">Edit</a>
+            <form method="post" action="{{ url_for('review.delete_seller_review', seller_review_id=r.seller_review_id) }}" style="display:inline-block;">
+              <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this review?');">Delete</button>
             </form>
           </td>
         </tr>
@@ -111,9 +136,10 @@
   </div>
 </div>
 
-<!-- Optional: make sure the proper tab is shown on page load -->
 <script>
-  var triggerEl = document.querySelector('#{{ review_type }}-tab');
-  if (triggerEl) new bootstrap.Tab(triggerEl).show();
+  document.addEventListener('DOMContentLoaded', function() {
+    var triggerEl = document.querySelector('#{{ review_type }}-tab');
+    if (triggerEl) new bootstrap.Tab(triggerEl).show();
+  });
 </script>
 {% endblock %}

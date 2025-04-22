@@ -20,30 +20,49 @@ class ProductReview:
     @staticmethod
     def get_by_product(product_id):
         rows = app.db.execute('''
-            SELECT pr.review_id, pr.product_id, pr.reviewer_id, pr.rating,
-                   pr.review_text, pr.image_url, pr.created_at, pr.updated_at,
-                   p.name AS product_name,
-                   u.firstname || ' ' || u.lastname AS seller_name
+            SELECT
+                pr.review_id,
+                pr.product_id,
+                pr.reviewer_id,
+                pr.rating,
+                pr.review_text,
+                pr.image_url,
+                pr.created_at,
+                pr.updated_at,
+                p.name AS product_name,
+                u.firstname || ' ' || u.lastname AS seller_name
             FROM Product_Reviews pr
             JOIN Products p ON pr.product_id = p.product_id
             JOIN Users u ON p.seller_id = u.id
             WHERE pr.product_id = :product_id
-        ''', product_id=product_id)
+            ORDER BY pr.created_at DESC
+        ''',
+        product_id=product_id)
         return [ProductReview(*row) for row in rows]
 
     @staticmethod
     def get_by_user(user_id):
         rows = app.db.execute('''
-            SELECT pr.review_id, pr.product_id, pr.reviewer_id, pr.rating,
-                   pr.review_text, pr.image_url, pr.created_at, pr.updated_at,
-                   p.name AS product_name,
-                   u.firstname || ' ' || u.lastname AS seller_name
+            SELECT
+                pr.review_id,
+                pr.product_id,
+                pr.reviewer_id,
+                pr.rating,
+                pr.review_text,
+                pr.image_url,
+                pr.created_at,
+                pr.updated_at,
+                p.name AS product_name,
+                u.firstname || ' ' || u.lastname AS seller_name
             FROM Product_Reviews pr
             JOIN Products p ON pr.product_id = p.product_id
             JOIN Users u ON p.seller_id = u.id
             WHERE pr.reviewer_id = :user_id
-        ''', user_id=user_id)
+            ORDER BY pr.created_at DESC
+        ''',
+        user_id=user_id)
         return [ProductReview(*row) for row in rows]
+
 
     @staticmethod
     def _sync_review_seq():
