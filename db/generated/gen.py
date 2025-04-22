@@ -3,9 +3,18 @@ import csv
 from faker import Faker
 
 # Modified quantities
+TOKEN_USER_ID = 100  # test user ID
 num_users = 100
 num_products = 600
 num_purchases = 200
+NUM_PRODUCT_REVIEWS = 1200
+NUM_SELLER_REVIEWS = 300
+
+# Extra test-user-specific data
+EXTRA_TEST_USER_PURCHASES = 50
+EXTRA_TEST_USER_PRODUCT_REVIEWS = 50
+EXTRA_TEST_USER_SELLER_REVIEWS_BY = 20
+EXTRA_TEST_USER_SELLER_REVIEWS_FOR = 20
 
 Faker.seed(0)
 fake = Faker()
@@ -241,6 +250,66 @@ def gen_seller_orders(num_orders, seller_id, available_pids):
         print(f'{num_orders} orders generated for seller {seller_id}')
     return
 
+def gen_product_reviews(count, available):
+    used = set()
+    with open('Product_Reviews.csv', 'w') as f:
+        writer = get_csv_writer(f)
+        rid = 0
+        while rid < count:
+            rev = fake.random_int(0, num_users)
+            pid = fake.random_element(available)
+            if (rev, pid) in used: continue
+            used.add((rev, pid))
+            writer.writerow([rid, pid, rev, fake.random_int(1, 5), fake.sentence(12), '', fake.date_time(), fake.date_time()])
+            rid += 1
+    return used, rid
+
+
+def gen_extra_product_reviews_for_test(extra, available, used_existing, start):
+    with open('Product_Reviews.csv', 'a') as f:
+        writer = get_csv_writer(f)
+        rid = start
+        for _ in range(extra):
+            pid = fake.random_element([p for p in available if (TOKEN_USER_ID, p) not in used_existing])
+            used_existing.add((TOKEN_USER_ID, pid))
+            writer.writerow([rid, pid, TOKEN_USER_ID, fake.random_int(1, 5), fake.sentence(12), '', fake.date_time(), fake.date_time()])
+            rid += 1
+
+
+def gen_seller_reviews(count):
+    used = set()
+    with open('Seller_Reviews.csv', 'w') as f:
+        writer = get_csv_writer(f)
+        sid = 0
+        while sid < count:
+            rev = fake.random_int(0, num_users)
+            sel = fake.random_int(0, num_users)
+            if rev == sel or (rev, sel) in used: continue
+            used.add((rev, sel))
+            writer.writerow([sid, sel, rev, fake.random_int(1, 5), fake.sentence(12), '', fake.date_time(), fake.date_time()])
+            sid += 1
+    return used, sid
+
+
+def gen_extra_seller_reviews_for_test(extra, used_existing, start):
+    with open('Seller_Reviews.csv', 'a') as f:
+        writer = get_csv_writer(f)
+        sid = start
+        for _ in range(extra):
+            # by test user
+            sel = fake.random_int(0, num_users)
+            if (TOKEN_USER_ID, sel) not in used_existing:
+                used_existing.add((TOKEN_USER_ID, sel))
+                writer.writerow([sid, sel, TOKEN_USER_ID, fake.random_int(1, 5), fake.sentence(12), '', fake.date_time(), fake.date_time()])
+                sid += 1
+        for _ in range(extra):
+            # for test user
+            rev = fake.random_int(0, num_users)
+            if (rev, TOKEN_USER_ID) not in used_existing:
+                used_existing.add((rev, TOKEN_USER_ID))
+                writer.writerow([sid, TOKEN_USER_ID, rev, fake.random_int(1, 5), fake.sentence(12), '', fake.date_time(), fake.date_time()])
+                sid += 1
+
 # Generate Categories first
 with open('Categories.csv', 'w') as f:
     writer = get_csv_writer(f)
@@ -259,3 +328,7 @@ gen_user_purchases(100, 45, available_pids)
 
 # Generate 45 orders where user_id 100 is the seller
 gen_seller_orders(45, 100, available_pids)
+existing_pr, next_pr = gen_product_reviews(NUM_PRODUCT_REVIEWS, available_pids)
+gen_extra_product_reviews_for_test(EXTRA_TEST_USER_PRODUCT_REVIEWS, available_pids, existing_pr, next_pr)
+existing_sr, next_sr = gen_seller_reviews(NUM_SELLER_REVIEWS)
+gen_extra_seller_reviews_for_test(EXTRA_TEST_USER_SELLER_REVIEWS_BY, existing_sr, next_sr)
