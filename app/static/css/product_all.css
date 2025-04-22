@@ -185,11 +185,17 @@ main {
     font-size: 0.9rem;
     color: #666;
 }
-
-.rating_stars {
-    font-size: 0.9rem;
-    color: gold;
-}
+.rating {
+    display: flex;
+    align-items: center;
+    gap: 6px;           /* space between stars and count */
+    margin: 8px 0;      /* vertical spacing if desired */
+  }
+  
+  .rating_stars,
+  .total_rating {
+    margin: 0;          /* reset default p/spans if any */
+  }  
 
 .unit-price {
     color: gray;

@@ -59,34 +59,48 @@
       </div>
       
       <section class="product-list">
-        <h2>{{page_heading}}</h2>
-        <div id="product-container">
-          {% for product in avail_products %}
-          <div class="product" 
-               data-price="{{ product.price }}" 
-               data-rating="{{ product.avg_rating|default(0) }}">
-            <img src={{product.image_url}} alt="Product Image" />
-            <div class="product-info">
-              <h3 class="product-title">{{ product.name }}</h3>
-              <p class="product-description">{{ product.description }}</p>
-              <div class="price-review">
-                <p class="price">${{ product.price }}</p>
-                <p class="avg_rating">{{ product.avg_rating|default(0) }}</p>
-                <p class="rating_stars">&#9733;&#9733;&#9733;&#9733;&#9734;</p>
-                <p class="total_rating">(999+)</p>
-              </div>
-              <div class="cart-actions">
-                <input type="number" value="1" min="1" class="quantity-input" />
-                <button class="add-to-cart"
-                        data-product-id="{{ product.id }}"
-                        data-unit-price="{{ product.price }}">
-                  Add to Cart
-                </button>
-              </div>
+        <h2>All Products</h2>
+        {% for product in avail_products %}
+        <div class="product">
+          <!-- ◀ WRAPPED IN A LINK TO DETAIL ▶ -->
+          <a href="{{ url_for('product.detail', product_id=product.id) }}">
+            <img
+              src="{{ url_for('static', filename='images/placeholder.png') }}"
+              alt="Product Image"
+            />
+            <h3 class="product-title">{{ product.name }}</h3>
+          </a>
+
+          <div class="product-info">
+            <p class="product-description">{{ product.description }}</p>
+            <p class="price">${{ product.price }}</p>
+          
+            <div class="rating">
+              <span class="rating_stars">
+                {%- set rating = product.average_rating|default(0) -%}
+                {%- set full = rating|int -%}
+                {%- set half = 1 if (rating - full) >= 0.5 else 0 -%}
+                {%- set empty = 5 - full - half -%}
+                {% for _ in range(full) %}&#9733;{% endfor %}
+                {% if half %}&#189;{% endif %}
+                {% for _ in range(empty) %}&#9734;{% endfor %}
+              </span>
+              <span class="total_rating">({{ product.number_of_reviews|default(0) }})</span>
             </div>
-          </div>
-          {% endfor %}
+          
+            <div class="cart-actions">
+              <input type="number" value="1" min="1" class="quantity-input" />
+              <button
+                class="add-to-cart"
+                data-product-id="{{ product.id }}"
+                data-unit-price="{{ product.price }}"
+              >
+                Add to Cart
+              </button>
+            </div>
+          </div>          
         </div>
+        {% endfor %}
       </section>
     </main>
   </div>
