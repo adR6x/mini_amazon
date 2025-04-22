@@ -4,11 +4,13 @@ from flask import (
 )
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
-from wtforms import SelectField, SubmitField, IntegerField, FloatField
-from wtforms.validators import Optional, NumberRange
+from wtforms import SelectField, SubmitField, IntegerField, FloatField, StringField
+from wtforms.validators import DataRequired, NumberRange, Optional
+import datetime
 
-from .models.product import Product
+from .models.product import Product, Category
 from .models.product_review import ProductReview
+from .models.purchase import Purchase
 
 bp = Blueprint('product', __name__)
 
@@ -38,49 +40,90 @@ class FilterForm(FlaskForm):
     )
     submit = SubmitField("Apply Filters")
 
+def form_validate(form):
+    review=form.review.data 
+    min_price=form.min_price.data
+    max_price=form.max_price.data
+    most_exp=form.most_exp.data
+    
+    if all(v is not None for v in [review, min_price, max_price, most_exp]):
+        return Product.get_filtered_all(review, min_price, max_price, most_exp)
 
-@bp.route('/product_all', methods=['GET', 'POST'])
-def product_all():
-    form = FilterForm()
-    if form.validate_on_submit():
-        return redirect(url_for(
-            'product.product_filtered',
-            review=form.review.data or None,
-            min_price=form.min_price.data,
-            max_price=form.max_price.data,
-            most_exp=form.most_exp.data
-        ))
-
-    products = Product.get_all_rnd5()
-    return render_template(
-        'product_all.html',
-        avail_products=products,
-        form=form
-    )
-
-
-@bp.route('/product_all/filtered', methods=['GET'])
-def product_filtered():
-    form = FilterForm(csrf_enabled=False)
-    # grab query params
-    review    = request.args.get('review',    type=int)
-    min_price = request.args.get('min_price', type=float)
-    max_price = request.args.get('max_price', type=float)
-    most_exp  = request.args.get('most_exp',  type=int)
-
-    # apply your filtering logic
-    if most_exp:
-        products = Product.get_filtered_top_exp(most_exp)
+    elif most_exp is not None:
+        return Product.get_filtered_top_exp(most_exp)
+    
     else:
-        products = Product.get_all_rnd5()
-        # you can also handle min_price/max_price/review here
+        return Product.get_all_rnd5()
+    
+class SearchForm(FlaskForm):
+    query = StringField("Search", validators=[Optional()])
+    submit = SubmitField("🔍")    
 
-    return render_template(
-        'product_all.html',
-        avail_products=products,
-        form=form
-    )
+def search_validate(form):
+    query = form.query.data
+    if query:
+        products = Product.get_by_search(query)
+        page_heading="Search results for " + query
+        return products, page_heading
+    else:
+        page_heading="Oops! You didn't search for anything 🙃"
+        return Product.get_all_rnd5(), page_heading
+    
+@bp.route('/product_all', methods=['GET','POST'])
+def product_all():
+    
+    ## Catagories
+    unique_cat = Category.get_unique()
 
+    products = Product.get_all_rnd5()        
+    page_heading="All Products 🛍️"
+    
+    filter_form = FilterForm()
+    if filter_form.validate_on_submit():
+        products = form_validate(filter_form)
+        
+    search_form = SearchForm()
+    if search_form.validate_on_submit():
+        products = search_validate(search_form)[0]
+        page_heading = search_validate(search_form)[1]    
+        
+    return render_template('product_all.html',
+                           avail_products=products,
+                           br_category=unique_cat,
+                           form=filter_form,
+                           search_form=search_form,
+                           page_heading=page_heading)
+    
+
+@bp.route('/product/category', methods=['GET','POST'])
+def by_category():
+    
+    category_id = request.args.get('category_id')
+    category_name = request.args.get('category_name')
+    
+    ## Catagories
+    unique_cat = Category.get_unique()
+
+    products = Product.get_by_cat(category_id)
+    
+    page_heading="Category: "+category_name        
+    
+    filter_form = FilterForm()
+    if filter_form.validate_on_submit():
+        products = form_validate(filter_form)
+        
+    search_form = SearchForm()
+    if search_form.validate_on_submit():
+        products = search_validate(search_form)[0]
+        page_heading = search_validate(search_form)[1]   
+        
+    return render_template('product_all.html',
+                           avail_products=products,
+                           br_category=unique_cat,
+                           form=filter_form,
+                           search_form=search_form,
+                           page_heading=page_heading) 
+    
 
 @bp.route('/product/<int:product_id>', methods=['GET'])
 @login_required
@@ -127,4 +170,4 @@ def add_review(product_id):
         ProductReview.create(product_id, current_user.id, rating, text)
         flash('Review submitted!', 'success')
 
-    return redirect(url_for('product.detail', product_id=product_id))
+    return redirect(url_for('product.detail', product_id=product_id))    

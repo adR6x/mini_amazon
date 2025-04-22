@@ -1,6 +1,30 @@
 from werkzeug.security import generate_password_hash
 import csv
 from faker import Faker
+import requests
+from bs4 import BeautifulSoup
+
+# Helper to fetch a 200x200 image URL from Bing Images
+def get_bing_square_image(query):
+    search_url = f"https://www.bing.com/images/search?q={query+' product'}&qft=+filterui:imagesize-custom_1500_1500&form=HDRSC2"
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/110.0.0.0 Safari/537.36"
+        )
+    }
+
+    response = requests.get(search_url, headers=headers)
+    if response.status_code != 200:
+        return "Failed to fetch results"
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    img_tags = soup.select("img.mimg")
+
+    if img_tags:
+        return img_tags[0].get("src")
+    return "No image found"
 
 # Modified quantities
 TOKEN_USER_ID = 100  # test user ID
@@ -61,8 +85,8 @@ def gen_products(num_products, num_users):
             seller_id = fake.random_int(min=0, max=num_users-1)
             category_id = fake.random_int(min=1, max=3)
             name = fake.sentence(nb_words=4)[:-1]
-            description = fake.paragraph(nb_sentences=3, variable_nb_sentences=False)[:-1]
-            image_url = fake.image_url()
+            description = fake.paragraph(nb_sentences=1, variable_nb_sentences=False)[:-1]
+            image_url = get_bing_square_image(name)
             price = round(fake.random.uniform(1, 500), 2)
             if fake.boolean(chance_of_getting_true=50):
                 available_pids.append(pid)

@@ -59,23 +59,49 @@ main {
 
 .search-bar {
     display: flex;
-    gap: 10px;
-    margin-bottom: 10px;
+    justify-content: center;
+    margin-bottom: 20px;
+    width: 100%;
 }
 
-.search-bar input {
-    flex-grow: 1;
-    padding: 10px;
+.search-form {
+    width: 100%;
+    max-width: 600px;
+}
+
+.search-wrapper {
+    display: flex;
+    align-items: center;
     border: 1px solid #ccc;
-    border-radius: 5px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: white;
 }
 
-.search-bar button {
-    padding: 10px 15px;
-    background: #ccc;
+.search-input {
+    flex-grow: 1;
+    padding: 10px 14px;
     border: none;
-    border-radius: 5px;
+    font-size: 15px;
+    background: #fff;
+}
+
+.search-input:focus {
+    outline: none;
+}
+
+.search-button {
+    background-color: #ccc;
+    color: #000;
+    border: none;
+    padding: 10px 16px;
     cursor: pointer;
+    font-size: 16px;
+    height: 100%;
+}
+
+.search-button:hover {
+    background-color: #bbb;
 }
 
 .filters {
@@ -96,11 +122,16 @@ main {
 }
 
 .product-list h2 {
-    display: inline-block;
-    margin-left: auto;
+    display: block;
+    margin-left: 0;
     margin-bottom: 15px;
     color: black;
 }
+
+.product-list {
+    min-height: calc(100vh - 200px); /* subtract header/footer height estimate */
+}
+
 
 .product {
     display: flex;
@@ -137,12 +168,34 @@ main {
     margin: 5px 0;
 }
 
+.price-review {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    white-space: nowrap;
+}
+
 .price {
+    font-size: 1.2rem;
     font-weight: bold;
-    font-size: 1.1em;
-    margin: 5px 0;
     color: green;
 }
+
+.avg_rating, .total_rating {
+    font-size: 0.9rem;
+    color: #666;
+}
+.rating {
+    display: flex;
+    align-items: center;
+    gap: 6px;           /* space between stars and count */
+    margin: 8px 0;      /* vertical spacing if desired */
+  }
+  
+  .rating_stars,
+  .total_rating {
+    margin: 0;          /* reset default p/spans if any */
+  }  
 
 .unit-price {
     color: gray;
