@@ -42,7 +42,7 @@
                         </td>
                         <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
                         <td>
-                            <a href="{{ url_for('users.purchase_details', order_id=order.order_id) }}" class="btn btn-sm btn-info">View Details</a>
+                            <a href="{{ url_for('users.purchase_details', order_id=order.order_id) }}" class="btn btn-sm btn-primary">View Details</a>
                         </td>
                     </tr>
                     {% endfor %}
