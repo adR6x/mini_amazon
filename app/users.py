@@ -11,7 +11,8 @@ from flask import current_app as app
 from werkzeug.security import generate_password_hash
 
 from .models.user import User
-
+from .models.product import Product
+from .models.seller_review import SellerReview
 
 from flask import Blueprint
 bp = Blueprint('users', __name__)
@@ -107,22 +108,22 @@ def purchases():
 @login_required
 def account():
     if request.method == 'POST':
-        # Retrieve form data
-        new_firstname = request.form.get('firstname')
-        new_lastname = request.form.get('lastname')
-        new_email = request.form.get('email')
-        new_password=request.form.get('password')
-        new_address = request.form.get('address')
-        new_balance = request.form.get('balance')
-        new_balance = float(new_balance) if new_balance else 0.00
-
-        # Validation: prevent negative balance
-        if new_balance < 0:
-            flash("Balance cannot be negative.", "danger")
-            return redirect(url_for('users.account'))
-        
-        # Update the user details in the database
         try:
+            # Retrieve form data
+            new_firstname = request.form.get('firstname')
+            new_lastname = request.form.get('lastname')
+            new_email = request.form.get('email')
+            new_password = request.form.get('password')
+            new_address = request.form.get('address')
+            new_balance = request.form.get('balance')
+            new_balance = float(new_balance) if new_balance else 0.00
+
+            # Validation: prevent negative balance
+            if new_balance < 0:
+                flash("Balance cannot be negative.", "danger")
+                return redirect(url_for('users.account'))
+            
+            # Update the user details in the database
             if new_password:
                 hashed_password = generate_password_hash(new_password)
                 app.db.execute('''
@@ -150,23 +151,56 @@ def account():
         except Exception as e:
             flash("Error updating profile: " + str(e), "danger")
 
-        user_details = app.db.execute('''
-        SELECT id, email, firstname, lastname, address, balance
-        FROM Users
-        WHERE id = :id
-    ''', id=current_user.id)[0]
-
-        return render_template('profile.html', user=user_details)
-        #return redirect(url_for('users.account'))
-
     # Fetch the current user details
-    user_details = app.db.execute('''
-        SELECT id, email, firstname, lastname, address, balance
-        FROM Users
-        WHERE id = :id
-    ''', id=current_user.id)[0]
+    try:
+        user_row = app.db.execute('''
+            SELECT id, email, firstname, lastname, address, balance
+            FROM Users
+            WHERE id = :id
+        ''', id=current_user.id)[0]
+        
+        # Convert Row to dictionary
+        user_details = {
+            'id': user_row.id,
+            'email': user_row.email,
+            'firstname': user_row.firstname,
+            'lastname': user_row.lastname,
+            'address': user_row.address,
+            'balance': user_row.balance
+        }
 
-    return render_template('profile.html', user=user_details)
+        # Check if user is a seller by looking at Products table
+        is_seller = app.db.execute('''
+            SELECT EXISTS (
+                SELECT 1 FROM Products WHERE seller_id = :id
+            )
+        ''', id=current_user.id)[0][0]
+
+        # Get seller stats if user is a seller
+        seller_stats = None
+        if is_seller:
+            seller_stats = {
+                'total_products': app.db.execute('''
+                    SELECT COUNT(*) FROM Products WHERE seller_id = :id
+                ''', id=current_user.id)[0][0],
+                'total_sales': app.db.execute('''
+                    SELECT COUNT(*) FROM Orders o
+                    JOIN Order_Items oi ON o.order_id = oi.order_id
+                    JOIN Products p ON oi.product_id = p.product_id
+                    WHERE p.seller_id = :id
+                ''', id=current_user.id)[0][0],
+                'average_rating': app.db.execute('''
+                    SELECT COALESCE(AVG(rating), 0) FROM Seller_Reviews WHERE seller_id = :id
+                ''', id=current_user.id)[0][0]
+            }
+
+        # Add is_seller to user_details
+        user_details['is_seller'] = is_seller
+
+        return render_template('profile.html', user=user_details, seller_stats=seller_stats)
+    except Exception as e:
+        flash("Error loading profile: " + str(e), "danger")
+        return redirect(url_for('index.index'))
 
 @bp.route('/user/<int:user_id>')
 def public_profile(user_id):
@@ -267,3 +301,129 @@ def fulfill_order(order_id):
     else:
         flash(result['message'], 'danger')
     return redirect(url_for('users.order_details', order_id=order_id))
+
+@bp.route('/profile/<int:user_id>')
+def view_profile(user_id):
+    """View a user's public profile."""
+    try:
+        print(f"Debug: Fetching profile for user_id: {user_id}")
+
+        # Get user details
+        user_result = app.db.execute('''
+            SELECT id, email, firstname, lastname, address
+            FROM Users
+            WHERE id = :id
+        ''', id=user_id)
+
+        if not user_result:
+            print("Debug: User not found")
+            flash('User not found', 'error')
+            return redirect(url_for('index.index'))
+
+        user_row = user_result[0]
+        print(f"Debug: User found: {user_row}")
+
+        # Convert Row to dictionary
+        user = {
+            'id': user_row.id,
+            'email': user_row.email,
+            'firstname': user_row.firstname,
+            'lastname': user_row.lastname,
+            'address': user_row.address
+        }
+        print(f"Debug: User dictionary: {user}")
+
+        # Debug: Check products directly
+        products = app.db.execute('''
+            SELECT product_id, name FROM Products WHERE seller_id = :id
+        ''', id=user_id)
+        print(f"Debug: Products found: {products}")
+
+        # Debug: Check all products in database
+        all_products = app.db.execute('''
+            SELECT product_id, name, seller_id FROM Products ORDER BY product_id LIMIT 5
+        ''')
+        print(f"Debug: All products in database: {all_products}")
+
+        # Debug: Check if seller IDs exist in Users table
+        seller_ids = [str(product[2]) for product in all_products]
+        seller_ids_str = ','.join(seller_ids)
+        sellers = app.db.execute(f'''
+            SELECT id, firstname, lastname FROM Users WHERE id IN ({seller_ids_str})
+        ''')
+        print(f"Debug: Sellers found: {sellers}")
+
+        # Check if user is a seller by looking at Products table
+        is_seller = len(products) > 0
+        print(f"Debug: Is seller: {is_seller}")
+
+        # Add is_seller to user
+        user['is_seller'] = is_seller
+
+        # Get user's seller stats and reviews if they are a seller
+        seller_stats = None
+        reviews = None
+        if is_seller:
+            print("Debug: Fetching seller stats and reviews")
+            
+            # Get seller stats
+            total_products = len(products)
+            print(f"Debug: Total products: {total_products}")
+
+            total_sales = app.db.execute('''
+                SELECT COUNT(*) FROM Orders o
+                JOIN Order_Items oi ON o.order_id = oi.order_id
+                JOIN Products p ON oi.product_id = p.product_id
+                WHERE p.seller_id = :id
+            ''', id=user_id)[0][0]
+            print(f"Debug: Total sales: {total_sales}")
+
+            avg_rating = app.db.execute('''
+                SELECT COALESCE(AVG(rating), 0) FROM Seller_Reviews WHERE seller_id = :id
+            ''', id=user_id)[0][0]
+            print(f"Debug: Average rating: {avg_rating}")
+
+            seller_stats = {
+                'total_products': total_products,
+                'total_sales': total_sales,
+                'average_rating': avg_rating
+            }
+            print(f"Debug: Seller stats: {seller_stats}")
+
+            # Get seller reviews
+            reviews_result = app.db.execute('''
+                SELECT sr.rating, sr.review_text, sr.created_at, 
+                       u.firstname as reviewer_firstname, u.lastname as reviewer_lastname
+                FROM Seller_Reviews sr
+                JOIN Users u ON sr.reviewer_id = u.id
+                WHERE sr.seller_id = :id
+                ORDER BY sr.created_at DESC
+            ''', id=user_id)
+            print(f"Debug: Reviews result: {reviews_result}")
+
+            # Convert reviews to list of dictionaries
+            reviews = []
+            for review in reviews_result:
+                review_dict = {
+                    'rating': review.rating,
+                    'review_text': review.review_text,
+                    'created_at': review.created_at,
+                    'reviewer_firstname': review.reviewer_firstname,
+                    'reviewer_lastname': review.reviewer_lastname
+                }
+                reviews.append(review_dict)
+                print(f"Debug: Review added: {review_dict}")
+
+        print(f"Debug: Final data being passed to template:")
+        print(f"Debug: User: {user}")
+        print(f"Debug: Seller stats: {seller_stats}")
+        print(f"Debug: Reviews: {reviews}")
+
+        return render_template('public_profile.html', 
+                             user=user,
+                             seller_stats=seller_stats,
+                             reviews=reviews)
+    except Exception as e:
+        print(f"Debug: Error occurred: {str(e)}")
+        flash(f'Error viewing profile: {str(e)}', 'error')
+        return redirect(url_for('index.index'))

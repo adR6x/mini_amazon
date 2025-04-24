@@ -1,0 +1,17 @@
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="card-title">Seller Information</h5>
+        <p class="card-text">
+            <a href="{{ url_for('users.view_profile', user_id=product.seller.id) }}" class="text-decoration-none">
+                {{ product.seller.username }}
+            </a>
+        </p>
+        {% if product.seller.is_seller %}
+        <p class="card-text">
+            <small class="text-muted">
+                Average Rating: {{ "%.1f"|format(product.seller.average_rating) }} / 5.0
+            </small>
+        </p>
+        {% endif %}
+    </div>
+</div> 
