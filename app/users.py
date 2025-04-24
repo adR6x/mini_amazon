@@ -347,28 +347,17 @@ def view_profile(user_id):
         }
         print(f"Debug: User dictionary: {user}")
 
-        # Debug: Check products directly
-        products = app.db.execute('''
-            SELECT product_id, name FROM Products WHERE seller_id = :id
+        # Debug: Check inventory
+        inventory = app.db.execute('''
+            SELECT i.product_id, p.name, i.quantity_available, i.price
+            FROM Inventory i
+            JOIN Products p ON i.product_id = p.product_id
+            WHERE i.seller_id = :id
         ''', id=user_id)
-        print(f"Debug: Products found: {products}")
+        print(f"Debug: Inventory found: {inventory}")
 
-        # Debug: Check all products in database
-        all_products = app.db.execute('''
-            SELECT product_id, name, seller_id FROM Products ORDER BY product_id LIMIT 5
-        ''')
-        print(f"Debug: All products in database: {all_products}")
-
-        # Debug: Check if seller IDs exist in Users table
-        seller_ids = [str(product[2]) for product in all_products]
-        seller_ids_str = ','.join(seller_ids)
-        sellers = app.db.execute(f'''
-            SELECT id, firstname, lastname FROM Users WHERE id IN ({seller_ids_str})
-        ''')
-        print(f"Debug: Sellers found: {sellers}")
-
-        # Check if user is a seller by looking at Products table
-        is_seller = len(products) > 0
+        # Check if user is a seller (has items in inventory)
+        is_seller = len(inventory) > 0
         print(f"Debug: Is seller: {is_seller}")
 
         # Add is_seller to user
@@ -381,7 +370,7 @@ def view_profile(user_id):
             print("Debug: Fetching seller stats and reviews")
             
             # Get seller stats
-            total_products = len(products)
+            total_products = len(inventory)
             print(f"Debug: Total products: {total_products}")
 
             total_sales = app.db.execute('''
