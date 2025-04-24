@@ -155,6 +155,7 @@ class Cart:
                     WHERE c.user_id = :user_id
                 '''), {'user_id': user_id}).fetchall()
                 print(f"Found {len(cart_items) if cart_items else 0} items with inventory")
+                print("Cart items details:", cart_items)
 
                 if not cart_items:
                     print("Cart is empty or no inventory found")
@@ -195,8 +196,8 @@ class Cart:
                 # Create order with initial status 'pending'
                 print("Creating order...")
                 order_id = conn.execute(text('''
-                    INSERT INTO Orders (order_id, buyer_id, total_amount, fulfillment_status)
-                    VALUES (DEFAULT, :buyer_id, :total_amount, 'pending')
+                    INSERT INTO Orders (buyer_id, total_amount, fulfillment_status)
+                    VALUES (:buyer_id, :total_amount, 'pending')
                     RETURNING order_id
                 '''), {
                     'buyer_id': user_id,
@@ -206,10 +207,11 @@ class Cart:
 
                 # Create order items and update inventory
                 for item in cart_items:
+                    print(f"Processing item: {item.product_name}")
                     # Create order item with initial status 'pending'
                     conn.execute(text('''
-                        INSERT INTO Order_Items (order_item_id, order_id, product_id, seller_id, quantity, unit_price, fulfillment_status)
-                        VALUES (DEFAULT, :order_id, :product_id, :seller_id, :quantity, :unit_price, 'pending')
+                        INSERT INTO Order_Items (order_id, product_id, seller_id, quantity, unit_price, fulfillment_status)
+                        VALUES (:order_id, :product_id, :seller_id, :quantity, :unit_price, 'pending')
                     '''), {
                         'order_id': order_id,
                         'product_id': item.product_id,
