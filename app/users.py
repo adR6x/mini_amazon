@@ -9,6 +9,8 @@ from .models.purchase import Purchase
 from .models.carts import Cart
 from flask import current_app as app
 from werkzeug.security import generate_password_hash
+import re
+from datetime import datetime
 
 from .models.user import User
 from .models.product import Product
@@ -169,36 +171,69 @@ def account():
             'balance': user_row.balance
         }
 
-        # Check if user is a seller by looking at Products table
-        is_seller = app.db.execute('''
-            SELECT EXISTS (
-                SELECT 1 FROM Products WHERE seller_id = :id
-            )
-        ''', id=current_user.id)[0][0]
+        # Debug: Check inventory
+        inventory = app.db.execute('''
+            SELECT i.product_id, p.name, i.quantity_available, i.price
+            FROM Inventory i
+            JOIN Products p ON i.product_id = p.product_id
+            WHERE i.seller_id = :id
+        ''', id=current_user.id)
+        print(f"Debug: Inventory found: {inventory}")
 
-        # Get seller stats if user is a seller
-        seller_stats = None
-        if is_seller:
-            seller_stats = {
-                'total_products': app.db.execute('''
-                    SELECT COUNT(*) FROM Products WHERE seller_id = :id
-                ''', id=current_user.id)[0][0],
-                'total_sales': app.db.execute('''
-                    SELECT COUNT(*) FROM Orders o
-                    JOIN Order_Items oi ON o.order_id = oi.order_id
-                    JOIN Products p ON oi.product_id = p.product_id
-                    WHERE p.seller_id = :id
-                ''', id=current_user.id)[0][0],
-                'average_rating': app.db.execute('''
-                    SELECT COALESCE(AVG(rating), 0) FROM Seller_Reviews WHERE seller_id = :id
-                ''', id=current_user.id)[0][0]
-            }
+        # Check if user is a seller (has items in inventory)
+        is_seller = len(inventory) > 0
+        print(f"Debug: Is seller: {is_seller}")
+        print(f"Debug: User ID: {current_user.id}")
 
         # Add is_seller to user_details
         user_details['is_seller'] = is_seller
 
+        # Get seller stats if user is a seller
+        seller_stats = None
+        if is_seller:
+            print("Debug: Fetching seller stats")
+            
+            # Get seller stats
+            total_products = len(inventory)
+            print(f"Debug: Total products: {total_products}")
+
+            total_sales = app.db.execute('''
+                SELECT COUNT(*) FROM Orders o
+                JOIN Order_Items oi ON o.order_id = oi.order_id
+                JOIN Products p ON oi.product_id = p.product_id
+                WHERE p.seller_id = :id
+            ''', id=current_user.id)[0][0]
+            print(f"Debug: Total sales: {total_sales}")
+
+            avg_rating = app.db.execute('''
+                SELECT COALESCE(AVG(rating), 0) FROM Seller_Reviews WHERE seller_id = :id
+            ''', id=current_user.id)[0][0]
+            print(f"Debug: Average rating: {avg_rating}")
+
+            # Get coupon statistics
+            coupon_stats = app.db.execute('''
+                SELECT 
+                    COUNT(*) as total_coupons,
+                    SUM(CASE WHEN is_active THEN 1 ELSE 0 END) as active_coupons,
+                    SUM(CASE WHEN NOT is_active THEN 1 ELSE 0 END) as inactive_coupons
+                FROM Coupons
+                WHERE seller_id = :id
+            ''', id=current_user.id)[0]
+
+            seller_stats = {
+                'total_products': total_products,
+                'total_sales': total_sales,
+                'average_rating': avg_rating,
+                'total_coupons': coupon_stats[0],
+                'active_coupons': coupon_stats[1],
+                'inactive_coupons': coupon_stats[2]
+            }
+            print(f"Debug: Seller stats: {seller_stats}")
+
+        print(f"Debug: Final user details: {user_details}")
         return render_template('profile.html', user=user_details, seller_stats=seller_stats)
     except Exception as e:
+        print(f"Debug: Error in account route: {str(e)}")
         flash("Error loading profile: " + str(e), "danger")
         return redirect(url_for('index.index'))
 
@@ -416,3 +451,160 @@ def view_profile(user_id):
         print(f"Debug: Error occurred: {str(e)}")
         flash(f'Error viewing profile: {str(e)}', 'error')
         return redirect(url_for('index.index'))
+
+@bp.route('/coupons')
+@login_required
+def manage_coupons():
+    """Manage seller coupons."""
+    # Check if user is a seller by looking at inventory
+    print(f"Debug: Checking inventory for user {current_user.id}")
+    inventory = app.db.execute('''
+        SELECT COUNT(*) as count
+        FROM Inventory
+        WHERE seller_id = :id
+    ''', id=current_user.id)
+    
+    is_seller = inventory[0].count > 0
+    print(f"Debug: Inventory count: {inventory[0].count}, Is seller: {is_seller}")
+    
+    if not is_seller:
+        flash('You need to be a seller to manage coupons.', 'warning')
+        return redirect(url_for('users.account'))
+
+    # Get active coupons for the seller with named columns
+    coupon_rows = app.db.execute('''
+        SELECT 
+            id, 
+            code, 
+            discount_amount, 
+            expiration_date, 
+            CAST(is_active AS INTEGER) as is_active, 
+            created_at
+        FROM Coupons
+        WHERE seller_id = :id
+        ORDER BY created_at DESC
+    ''', id=current_user.id)
+
+    # Convert rows to dictionaries
+    coupons = []
+    for row in coupon_rows:
+        coupon = {
+            'id': row[0],
+            'code': row[1],
+            'discount_amount': row[2],
+            'expiration_date': row[3],
+            'is_active': row[4],
+            'created_at': row[5]
+        }
+        coupons.append(coupon)
+
+    # Create a user dictionary with is_seller flag
+    user_dict = {
+        'id': current_user.id,
+        'email': current_user.email,
+        'firstname': current_user.firstname,
+        'lastname': current_user.lastname,
+        'is_seller': is_seller
+    }
+
+    # Get today's date for the date picker
+    today = datetime.now().strftime('%Y-%m-%d')
+
+    return render_template('seller_coupons.html', user=user_dict, coupons=coupons, today=today)
+
+@bp.route('/coupons/create', methods=['POST'])
+@login_required
+def create_coupon():
+    """Create a new coupon."""
+    # Check if user is a seller
+    inventory = app.db.execute('''
+        SELECT COUNT(*) as count
+        FROM Inventory
+        WHERE seller_id = :id
+    ''', id=current_user.id)
+    
+    is_seller = inventory[0].count > 0
+    
+    if not is_seller:
+        flash('You need to be a seller to manage coupons.', 'warning')
+        return redirect(url_for('users.account'))
+
+    try:
+        # Get form data
+        code = request.form.get('code', '').upper()  # Convert to uppercase
+        discount_amount = float(request.form.get('discount_amount', 0))
+        expiration_date = request.form.get('expiration_date')
+
+        # Validate coupon code format
+        if not re.match(r'^[A-Z0-9]{6,20}$', code):
+            flash('Coupon code must be 6-20 characters and contain only letters and numbers.', 'danger')
+            return redirect(url_for('users.manage_coupons'))
+
+        # Validate discount amount
+        if discount_amount <= 0:
+            flash('Discount amount must be greater than 0.', 'danger')
+            return redirect(url_for('users.manage_coupons'))
+
+        # Convert date string to datetime (set time to end of day)
+        expiration_datetime = datetime.strptime(expiration_date, '%Y-%m-%d')
+        expiration_datetime = expiration_datetime.replace(hour=23, minute=59, second=59)
+
+        if expiration_datetime <= datetime.now():
+            flash('Expiration date must be in the future.', 'danger')
+            return redirect(url_for('users.manage_coupons'))
+
+        # Create coupon
+        app.db.execute('''
+            INSERT INTO Coupons (seller_id, code, discount_amount, expiration_date)
+            VALUES (:seller_id, :code, :discount_amount, :expiration_date)
+        ''', seller_id=current_user.id, code=code, discount_amount=discount_amount, 
+             expiration_date=expiration_datetime)
+
+        flash('Coupon created successfully!', 'success')
+        return redirect(url_for('users.manage_coupons'))
+
+    except Exception as e:
+        flash(f'Error creating coupon: {str(e)}', 'danger')
+        return redirect(url_for('users.manage_coupons'))
+
+@bp.route('/coupons/<int:coupon_id>/deactivate', methods=['POST'])
+@login_required
+def deactivate_coupon(coupon_id):
+    """Deactivate a coupon."""
+    # Check if user is a seller
+    inventory = app.db.execute('''
+        SELECT COUNT(*) as count
+        FROM Inventory
+        WHERE seller_id = :id
+    ''', id=current_user.id)
+    
+    is_seller = inventory[0].count > 0
+    
+    if not is_seller:
+        flash('You need to be a seller to manage coupons.', 'warning')
+        return redirect(url_for('users.account'))
+
+    try:
+        # Verify coupon belongs to seller
+        coupon = app.db.execute('''
+            SELECT id FROM Coupons 
+            WHERE id = :coupon_id AND seller_id = :seller_id
+        ''', coupon_id=coupon_id, seller_id=current_user.id)
+
+        if not coupon:
+            flash('Coupon not found or unauthorized.', 'danger')
+            return redirect(url_for('users.manage_coupons'))
+
+        # Deactivate coupon
+        app.db.execute('''
+            UPDATE Coupons 
+            SET is_active = FALSE 
+            WHERE id = :coupon_id
+        ''', coupon_id=coupon_id)
+
+        flash('Coupon deactivated successfully.', 'success')
+        return redirect(url_for('users.manage_coupons'))
+
+    except Exception as e:
+        flash(f'Error deactivating coupon: {str(e)}', 'danger')
+        return redirect(url_for('users.manage_coupons'))
