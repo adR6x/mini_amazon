@@ -1,7 +1,11 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, session
 from flask_login import current_user, login_required
 from app.models.carts import Cart
 import app.db
+from datetime import datetime
+from flask import current_app as app
+import traceback
+from decimal import Decimal
 
 cart = Blueprint('cart', __name__)
 
@@ -36,10 +40,46 @@ def cart_page():
         # Get user's address
         user_address = Cart.get_user_address(current_user.id)
 
+        # Get applied coupons and calculate discounts
+        applied_coupons = []
+        total_discount = Decimal('0.00')
+        
+        if 'applied_coupons' in session:
+            for coupon in session['applied_coupons']:
+                # Get cart items with seller information
+                cart_items_with_seller = app.db.execute("""
+                    SELECT ci.cart_item_id, ci.product_id, p.name AS product_name, 
+                           ci.quantity, ci.unit_price, ci.added_at, i.seller_id
+                    FROM Cart_Items ci
+                    JOIN Carts c ON ci.cart_id = c.cart_id
+                    JOIN Products p ON ci.product_id = p.product_id
+                    JOIN Inventory i ON ci.product_id = i.product_id
+                    WHERE c.user_id = :user_id
+                """, user_id=current_user.id)
+
+                # Calculate discount for this seller's products
+                seller_items = [item for item in cart_items_with_seller if item[6] == coupon['seller_id']]
+                seller_subtotal = sum(item[3] * item[4] for item in seller_items)
+                # Convert discount_amount to Decimal for consistent type handling
+                discount_amount = min(seller_subtotal, Decimal(str(coupon['discount_amount'])))
+                
+                applied_coupons.append({
+                    'id': coupon['id'],
+                    'code': coupon['code'],
+                    'discount_amount': discount_amount,
+                    'seller_name': coupon['seller_name']
+                })
+                total_discount += discount_amount
+        
+        total = total_amount - total_discount
+
         return render_template('cart.html',
                                cart_items=enhanced_cart_items,
                                total_amount=round(total_amount, 2),
-                               user_address=user_address)
+                               user_address=user_address,
+                               total_discount=round(total_discount, 2),
+                               total=round(total, 2),
+                               applied_coupons=applied_coupons)
     except Exception as e:
         import traceback
         print(f"Error in cart_page: {str(e)}")
@@ -241,4 +281,97 @@ def checkout():
         print(f"Error in checkout route: {str(e)}")
         print(traceback.format_exc())
         flash('An error occurred during checkout. Please try again.', 'danger')
+        return redirect(url_for('cart.cart_page'))
+
+
+@cart.route('/apply_coupon', methods=['POST'])
+@login_required
+def apply_coupon():
+    try:
+        # Get cart items to check if user has items from the coupon's seller
+        cart_items = Cart.get_cart_items(current_user.id)
+        if not cart_items:
+            flash('Your cart is empty. Add items before applying coupons.', 'warning')
+            return redirect(url_for('cart.cart_page'))
+
+        coupon_code = request.form.get('coupon_code')
+        if not coupon_code:
+            flash('Please enter a coupon code', 'warning')
+            return redirect(url_for('cart.cart_page'))
+
+        # Get coupon details
+        coupon_result = app.db.execute("""
+            SELECT c.id, c.code, c.seller_id, c.discount_amount, c.expiration_date, c.is_active,
+                   CONCAT(u.firstname, ' ', u.lastname) as seller_name
+            FROM Coupons c
+            JOIN Users u ON c.seller_id = u.id
+            WHERE c.code = :code 
+            AND c.is_active = true
+            AND c.expiration_date > CURRENT_TIMESTAMP
+        """, code=coupon_code)
+
+        if not coupon_result:
+            flash('Invalid or expired coupon code', 'error')
+            return redirect(url_for('cart.cart_page'))
+
+        coupon = coupon_result[0]  # Get the first row
+
+        # Check if coupon is already applied
+        applied_coupons = session.get('applied_coupons', [])
+        if any(c['id'] == coupon[0] for c in applied_coupons):  # coupon[0] is the id
+            flash('This coupon is already applied', 'warning')
+            return redirect(url_for('cart.cart_page'))
+
+        # Get cart items with seller information
+        cart_items_with_seller = app.db.execute("""
+            SELECT ci.cart_item_id, ci.product_id, p.name AS product_name, 
+                   ci.quantity, ci.unit_price, ci.added_at, i.seller_id
+            FROM Cart_Items ci
+            JOIN Carts c ON ci.cart_id = c.cart_id
+            JOIN Products p ON ci.product_id = p.product_id
+            JOIN Inventory i ON ci.product_id = i.product_id
+            WHERE c.user_id = :user_id
+        """, user_id=current_user.id)
+
+        # Check if user has items from this seller
+        seller_items = [item for item in cart_items_with_seller if item[6] == coupon[2]]  # coupon[2] is the seller_id
+        if not seller_items:
+            flash(f'You need items from {coupon[6]} to use this coupon. Add their products to your cart first.', 'warning')
+            return redirect(url_for('cart.cart_page'))
+
+        # Add coupon to session
+        applied_coupons.append({
+            'id': coupon[0],  # id
+            'code': coupon[1],  # code
+            'discount_amount': coupon[3],  # discount_amount
+            'seller_id': coupon[2],  # seller_id
+            'seller_name': coupon[6]  # seller_name
+        })
+        session['applied_coupons'] = applied_coupons
+
+        flash('Coupon applied successfully!', 'success')
+        return redirect(url_for('cart.cart_page'))
+
+    except Exception as e:
+        print(f"Error applying coupon: {str(e)}")
+        print(traceback.format_exc())
+        flash('An error occurred while applying the coupon', 'error')
+        return redirect(url_for('cart.cart_page'))
+
+
+@cart.route('/cart/remove_coupon/<int:coupon_id>', methods=['POST'])
+@login_required
+def remove_coupon(coupon_id):
+    try:
+        if 'applied_coupons' in session:
+            # Find and remove the coupon with matching ID
+            applied_coupons = session['applied_coupons']
+            session['applied_coupons'] = [c for c in applied_coupons if c['id'] != coupon_id]
+            session.modified = True
+            flash('Coupon removed successfully', 'success')
+        return redirect(url_for('cart.cart_page'))
+    except Exception as e:
+        print(f"Error removing coupon: {str(e)}")
+        print(traceback.format_exc())
+        flash('Error removing coupon', 'error')
         return redirect(url_for('cart.cart_page'))

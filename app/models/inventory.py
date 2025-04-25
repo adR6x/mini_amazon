@@ -33,8 +33,6 @@ class Inventory:
 
     @staticmethod
     def update_field(seller_id, product_id, field, value):
-        # print(field, value)
-        # print(seller_id, product_id)
         # Define valid fields for each table
         inventory_fields = {"quantity_available", "price"}
         product_fields = {"product_name", "description", "image_url", "category_id", "price"}
@@ -54,21 +52,39 @@ class Inventory:
 
         # If price, update in both tables
         if field == "price":
-            result_inventory = app.db.execute(f"""
-                UPDATE Inventory
-                SET {field_mapping[field]} = :value
-                WHERE product_id = :product_id AND seller_id = :seller_id
-                RETURNING product_id
-            """, value=value, product_id=product_id, seller_id=seller_id)
+            try:
+                # Start a transaction
+                app.db.execute("BEGIN")
+                
+                # Update Inventory first
+                inventory_result = app.db.execute(f"""
+                    UPDATE Inventory
+                    SET {field_mapping[field]} = :value
+                    WHERE product_id = :product_id AND seller_id = :seller_id
+                    RETURNING price
+                """, value=value, product_id=product_id, seller_id=seller_id)
+                
+                if not inventory_result:
+                    raise ValueError(f"No inventory found for product {product_id} and seller {seller_id}")
 
-            result_product = app.db.execute(f"""
-                UPDATE Products
-                SET {field_mapping[field]} = :value
-                WHERE product_id = :product_id AND seller_id = :seller_id
-                RETURNING product_id
-            """, value=value, product_id=product_id, seller_id=seller_id)
+                # Then update Products
+                products_result = app.db.execute(f"""
+                    UPDATE Products
+                    SET {field_mapping[field]} = :value
+                    WHERE product_id = :product_id
+                    RETURNING price
+                """, value=value, product_id=product_id)
+                
+                if not products_result:
+                    raise ValueError(f"No product found for product {product_id}")
 
-            return result_inventory and result_product
+                # Commit the transaction
+                app.db.execute("COMMIT")
+
+                return True
+            except Exception as e:
+                app.db.execute("ROLLBACK")
+                raise e
 
         # Otherwise, update in the appropriate table
         elif field in inventory_fields:
@@ -78,15 +94,13 @@ class Inventory:
         else:
             raise ValueError("Invalid field")
 
-        result = app.db.execute(f"""
+        app.db.execute(f"""
             UPDATE {table}
             SET {field_mapping[field]} = :value
             WHERE product_id = :product_id AND seller_id = :seller_id
-            RETURNING product_id
         """, value=value, product_id=product_id, seller_id=seller_id)
 
-        return result
-
+        return True
 
     @staticmethod
     def product_exists(seller_id, product_name):

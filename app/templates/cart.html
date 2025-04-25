@@ -4,125 +4,121 @@
   rel="stylesheet"
   href="{{ url_for('static', filename='css/cart.css') }}"
 />
-<div class="container">
-  <div class="cart-container">
-    <h1>Shopping Cart</h1>
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">Your Cart</h2>
+        </div>
+    </div>
+    
     {% if cart_items %}
-    <div class="cart-table">
-      <div class="cart-header">
-        <div class="header-item">Product</div>
-        <div class="header-price">Price</div>
-      </div>
-
-      {% for item in cart_items %}
-      <div class="cart-item">
-        <div class="item-details">
-          <img
-            src="{{ url_for('static', filename='images/placeholder.png') }}"
-            alt="{{ item.product_name }}"
-          />
-          <div class="item-info">
-            <h3>{{ item.product_name }}</h3>
-            <div class="item-meta">Added: {{ item.added_at }}</div>
-            <div class="quantity-controls">
-              <form
-                class="update-form"
-                action="{{ url_for('cart.update_quantity') }}"
-                method="post"
-              >
-                <input
-                  type="hidden"
-                  name="cart_item_id"
-                  value="{{ item.cart_item_id }}"
-                />
-                <input
-                  type="number"
-                  name="quantity"
-                  value="{{ item.quantity }}"
-                  min="1"
-                  class="quantity-input"
-                  data-item-id="{{ item.cart_item_id }}"
-                />
-              </form>
-              <form
-                class="remove-form"
-                action="{{ url_for('cart.remove_item') }}"
-                method="post"
-              >
-                <input
-                  type="hidden"
-                  name="cart_item_id"
-                  value="{{ item.cart_item_id }}"
-                />
-                <button type="submit" class="btn-remove">Remove</button>
-              </form>
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card" style="padding: 20px;">
+                <div class="card-body">
+                    {% for item in cart_items %}
+                    <div class="cart-item mb-4 pb-4 border-bottom" data-cart-item-id="{{ item.cart_item_id }}">
+                        <div class="row align-items-center">
+                            <div class="col-md-2">
+                                <img src="{{ item.image_url or url_for('static', filename='images/placeholder.png') }}" 
+                                     class="img-fluid rounded" 
+                                     style="width: 100px; height: 100px; object-fit: cover;">
+                            </div>
+                            <div class="col-md-2">
+                                <h5 class="mb-1">{{ item.product_name }}</h5>
+                                <small class="text-muted">ID: {{ item.product_id }}</small>
+                            </div>
+                            <div class="col-md-2 text-center">
+                                <span class="unit-price">${{ "%.2f"|format(item.unit_price) }}</span>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" 
+                                       class="form-control quantity-input" 
+                                       data-item-id="{{ item.cart_item_id }}"
+                                       value="{{ item.quantity }}" 
+                                       min="1" 
+                                       max="{{ item.quantity_available }}"
+                                       style="width: 80px;">
+                            </div>
+                            <div class="col-md-2 text-center">
+                                <span class="total-item-price">${{ "%.2f"|format(item.total_price) }}</span>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <form action="{{ url_for('cart.remove_item') }}" method="POST" class="d-inline">
+                                    <input type="hidden" name="cart_item_id" value="{{ item.cart_item_id }}">
+                                    <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
-          </div>
         </div>
-        <div class="item-price">
-          <div class="unit-price">${{ item.unit_price }}</div>
-          <div class="total-item-price">${{ item.total_price|round(2) }}</div>
-        </div>
-      </div>
-      {% endfor %}
+        
+        <div class="col-md-4">
+            <div class="card" style="padding: 20px;">
+                <div class="card-header" style="padding: 15px; margin-bottom: 20px;">
+                    <h4 class="mb-0">Order Summary</h4>
+                </div>
+                <div class="card-body" style="padding: 0;">
+                    <!-- Coupon Input -->
+                    <div class="mb-4">
+                        <form action="{{ url_for('cart.apply_coupon') }}" method="POST" class="d-flex">
+                            <input type="text" name="coupon_code" class="form-control me-2" placeholder="Enter coupon code" required>
+                            <button type="submit" class="btn btn-primary">Apply</button>
+                        </form>
+                    </div>
 
-      <div class="cart-total">
-        <div class="total-label">
-          Total Amount ({{ cart_items|length }} Items):
+                    <!-- Applied Coupons -->
+                    {% if applied_coupons %}
+                    <div class="mb-4">
+                        <h5>Applied Coupons:</h5>
+                        {% for coupon in applied_coupons %}
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span>
+                                {{ coupon.code }}
+                                <small class="text-success">-${{ "%.2f"|format(coupon.discount_amount) }}</small>
+                            </span>
+                            <form action="{{ url_for('cart.remove_coupon', coupon_id=coupon.id) }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Order Summary -->
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="h5">Subtotal:</span>
+                        <span class="h5">${{ "%.2f"|format(total_amount) }}</span>
+                    </div>
+                    {% if total_discount > 0 %}
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="h5">Discount:</span>
+                        <span class="h5 text-success">-${{ "%.2f"|format(total_discount) }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="d-flex justify-content-between mb-4">
+                        <span class="h4"><strong>Total:</strong></span>
+                        <span class="h4"><strong>${{ "%.2f"|format(total) }}</strong></span>
+                    </div>
+                    <form id="checkoutForm" action="{{ url_for('cart.checkout') }}" method="POST">
+                        <button type="submit" class="btn btn-primary w-100" style="padding: 12px; font-size: 1.1em;">Proceed to Checkout</button>
+                    </form>
+                </div>
+            </div>
         </div>
-        <div class="total-price">${{ total_amount }}</div>
-      </div>
     </div>
     {% else %}
-    <p class="empty-cart">Your cart is empty.</p>
-    <a href="{{ url_for('product.product_all') }}" class="btn-continue-shopping"
-      >Continue Shopping</a
-    >
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info">
+                Your cart is empty. <a href="{{ url_for('product.product_all') }}">Continue shopping</a>
+            </div>
+        </div>
+    </div>
     {% endif %}
-  </div>
-  <div
-    id="loading-indicator"
-    style="
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(255, 255, 255, 0.8);
-      padding: 20px;
-      border-radius: 5px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      z-index: 1000;
-    "
-  >
-    Updating Cart...
-  </div>
-
-  {% if cart_items %}
-  <div class="checkout-sidebar">
-    <div class="delivery-address">
-      <h3>Delivery Address:</h3>
-      {% if user_address %}
-      <p>{{ user_address }}</p>
-      <a href="#" class="btn-change">Change</a>
-      {% else %}
-      <p>No address on file. Please add an address.</p>
-      <a href="#" class="btn-change">Add Address</a>
-      {% endif %}
-    </div>
-
-    <div class="order-summary">
-      <h3>Order Summary</h3>
-      <div class="subtotal">
-        <span>Subtotal:</span>
-        <span>${{ total_amount }}</span>
-      </div>
-      <form action="{{ url_for('cart.checkout') }}" method="post">
-        <button type="submit" class="btn-checkout">Proceed to Checkout</button>
-      </form>
-    </div>
-  </div>
-  {% endif %}
 </div>
 <script>
   document.addEventListener("DOMContentLoaded", function () {
@@ -141,7 +137,9 @@
         updateTimer = setTimeout(async () => {
           try {
             // Show loading indicator
-            loadingIndicator.style.display = "block";
+            if (loadingIndicator) {
+              loadingIndicator.style.display = "block";
+            }
 
             // Send AJAX request
             const response = await fetch(
@@ -166,17 +164,24 @@
               if (result.success) {
                 // Update the total price for this item
                 const itemRow = this.closest(".cart-item");
-                const totalPriceElement =
-                  itemRow.querySelector(".total-item-price");
+                const totalPriceElement = itemRow.querySelector(".total-item-price");
                 const unitPriceElement = itemRow.querySelector(".unit-price");
 
                 if (totalPriceElement && unitPriceElement) {
-                  const unitPrice = parseFloat(
-                    unitPriceElement.textContent.replace("$", "")
-                  );
+                  const unitPrice = parseFloat(unitPriceElement.textContent.replace("$", ""));
                   const newTotalPrice = (unitPrice * newQuantity).toFixed(2);
                   totalPriceElement.textContent = "$" + newTotalPrice;
-                }            
+                }
+                
+                // Update the order summary without reloading
+                const orderSummaryResponse = await fetch('{{ url_for("cart.cart_page") }}');
+                const orderSummaryHtml = await orderSummaryResponse.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(orderSummaryHtml, 'text/html');
+                const newOrderSummary = doc.querySelector('.col-md-4 .card');
+                if (newOrderSummary) {
+                  document.querySelector('.col-md-4 .card').innerHTML = newOrderSummary.innerHTML;
+                }
               } else {
                 alert(result.message || "Failed to update quantity");
               }
@@ -188,7 +193,9 @@
             alert("An error occurred. Please try again.");
           } finally {
             // Hide loading indicator
-            loadingIndicator.style.display = "none";
+            if (loadingIndicator) {
+              loadingIndicator.style.display = "none";
+            }
           }
         }, 300);
       });
