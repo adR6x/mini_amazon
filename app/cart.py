@@ -5,6 +5,7 @@ import app.db
 from datetime import datetime
 from flask import current_app as app
 import traceback
+from decimal import Decimal
 
 cart = Blueprint('cart', __name__)
 
@@ -39,32 +40,36 @@ def cart_page():
         # Get user's address
         user_address = Cart.get_user_address(current_user.id)
 
-        # Get applied coupons
+        # Get applied coupons and calculate discounts
         applied_coupons = []
-        total_discount = 0
+        total_discount = Decimal('0.00')
         
         if 'applied_coupons' in session:
-            for coupon_id in session['applied_coupons']:
-                coupon = app.db.execute("""
-                    SELECT c.*, u.username as seller_name
-                    FROM coupons c
-                    JOIN users u ON c.seller_id = u.id
-                    WHERE c.id = %s AND c.is_active = true AND c.expiration_date > NOW()
-                """, (coupon_id,)).fetchone()
+            for coupon in session['applied_coupons']:
+                # Get cart items with seller information
+                cart_items_with_seller = app.db.execute("""
+                    SELECT ci.cart_item_id, ci.product_id, p.name AS product_name, 
+                           ci.quantity, ci.unit_price, ci.added_at, i.seller_id
+                    FROM Cart_Items ci
+                    JOIN Carts c ON ci.cart_id = c.cart_id
+                    JOIN Products p ON ci.product_id = p.product_id
+                    JOIN Inventory i ON ci.product_id = i.product_id
+                    WHERE c.user_id = :user_id
+                """, user_id=current_user.id)
+
+                # Calculate discount for this seller's products
+                seller_items = [item for item in cart_items_with_seller if item[6] == coupon['seller_id']]
+                seller_subtotal = sum(item[3] * item[4] for item in seller_items)
+                # Convert discount_amount to Decimal for consistent type handling
+                discount_amount = min(seller_subtotal, Decimal(str(coupon['discount_amount'])))
                 
-                if coupon:
-                    # Calculate discount for this seller's products
-                    seller_items = [item for item in cart_items if item[6] == coupon.seller_id]
-                    seller_subtotal = sum(item[3] * item[4] for item in seller_items)
-                    discount_amount = min(seller_subtotal * (coupon.discount_percent / 100), coupon.max_discount)
-                    
-                    applied_coupons.append({
-                        'id': coupon.id,
-                        'code': coupon.code,
-                        'discount_amount': discount_amount,
-                        'seller_name': coupon.seller_name
-                    })
-                    total_discount += discount_amount
+                applied_coupons.append({
+                    'id': coupon['id'],
+                    'code': coupon['code'],
+                    'discount_amount': discount_amount,
+                    'seller_name': coupon['seller_name']
+                })
+                total_discount += discount_amount
         
         total = total_amount - total_discount
 
@@ -320,10 +325,11 @@ def apply_coupon():
         # Get cart items with seller information
         cart_items_with_seller = app.db.execute("""
             SELECT ci.cart_item_id, ci.product_id, p.name AS product_name, 
-                   ci.quantity, ci.unit_price, ci.added_at, p.seller_id
+                   ci.quantity, ci.unit_price, ci.added_at, i.seller_id
             FROM Cart_Items ci
             JOIN Carts c ON ci.cart_id = c.cart_id
             JOIN Products p ON ci.product_id = p.product_id
+            JOIN Inventory i ON ci.product_id = i.product_id
             WHERE c.user_id = :user_id
         """, user_id=current_user.id)
 
@@ -356,8 +362,16 @@ def apply_coupon():
 @cart.route('/cart/remove_coupon/<int:coupon_id>', methods=['POST'])
 @login_required
 def remove_coupon(coupon_id):
-    if 'applied_coupons' in session and coupon_id in session['applied_coupons']:
-        session['applied_coupons'].remove(coupon_id)
-        session.modified = True
-        flash('Coupon removed', 'info')
-    return redirect(url_for('cart.cart_page'))
+    try:
+        if 'applied_coupons' in session:
+            # Find and remove the coupon with matching ID
+            applied_coupons = session['applied_coupons']
+            session['applied_coupons'] = [c for c in applied_coupons if c['id'] != coupon_id]
+            session.modified = True
+            flash('Coupon removed successfully', 'success')
+        return redirect(url_for('cart.cart_page'))
+    except Exception as e:
+        print(f"Error removing coupon: {str(e)}")
+        print(traceback.format_exc())
+        flash('Error removing coupon', 'error')
+        return redirect(url_for('cart.cart_page'))

@@ -1,5 +1,7 @@
 from flask import current_app as app
+from flask import session
 from sqlalchemy import text
+from decimal import Decimal
 
 
 class Cart:
@@ -147,19 +149,19 @@ class Cart:
                         ci.quantity,
                         ci.unit_price,
                         ci.seller_id,
-                        i.quantity_available
+                        COALESCE(i.quantity_available, 0) as quantity_available
                     FROM Cart_Items ci
                     JOIN Carts c ON ci.cart_id = c.cart_id
                     JOIN Products p ON ci.product_id = p.product_id
-                    JOIN Inventory i ON ci.product_id = i.product_id AND ci.seller_id = i.seller_id
+                    LEFT JOIN Inventory i ON ci.product_id = i.product_id AND ci.seller_id = i.seller_id
                     WHERE c.user_id = :user_id
                 '''), {'user_id': user_id}).fetchall()
                 print(f"Found {len(cart_items) if cart_items else 0} items with inventory")
                 print("Cart items details:", cart_items)
 
                 if not cart_items:
-                    print("Cart is empty or no inventory found")
-                    return {'success': False, 'message': 'Your cart is empty or the items are no longer available.'}
+                    print("Cart is empty")
+                    return {'success': False, 'message': 'Your cart is empty.'}
 
                 # Get buyer's balance
                 buyer = conn.execute(text('''
@@ -178,14 +180,33 @@ class Cart:
                 
                 print(f"Buyer balance: ${buyer.balance}")
 
-                # Calculate total amount
+                # Calculate total amount before discounts
                 total_amount = sum(item.quantity * item.unit_price for item in cart_items)
-                print(f"Total amount: ${total_amount}")
+                print(f"Total amount before discounts: ${total_amount}")
 
-                # Check buyer's balance
-                if buyer.balance < total_amount:
-                    print(f"Insufficient balance: ${buyer.balance} < ${total_amount}")
-                    return {'success': False, 'message': f'Insufficient balance. You need ${total_amount - buyer.balance:.2f} more to complete this purchase.'}
+                # Calculate total discount from applied coupons
+                total_discount = Decimal('0.00')
+                if 'applied_coupons' in session:
+                    print("Found applied coupons:", session['applied_coupons'])
+                    for coupon in session['applied_coupons']:
+                        print(f"Processing coupon: {coupon}")
+                        # Get items from this seller
+                        seller_items = [item for item in cart_items if item.seller_id == coupon['seller_id']]
+                        print(f"Found {len(seller_items)} items from seller {coupon['seller_id']}")
+                        if seller_items:
+                            seller_subtotal = sum(item.quantity * item.unit_price for item in seller_items)
+                            discount_amount = min(seller_subtotal, Decimal(str(coupon['discount_amount'])))
+                            total_discount += discount_amount
+                            print(f"Applied discount of ${discount_amount} for seller {coupon['seller_id']}")
+
+                # Calculate final total after discounts
+                final_total = total_amount - total_discount
+                print(f"Total after discounts: ${final_total} (Original: ${total_amount}, Discount: ${total_discount})")
+
+                # Check buyer's balance against final total
+                if buyer.balance < final_total:
+                    print(f"Insufficient balance: ${buyer.balance} < ${final_total}")
+                    return {'success': False, 'message': f'Insufficient balance. You need ${final_total - buyer.balance:.2f} more to complete this purchase.'}
 
                 # Check inventory for all items
                 for item in cart_items:
@@ -201,7 +222,7 @@ class Cart:
                     RETURNING order_id
                 '''), {
                     'buyer_id': user_id,
-                    'total_amount': total_amount
+                    'total_amount': final_total  # Use final_total instead of total_amount
                 }).fetchone()[0]
                 print(f"Created order {order_id}")
 
@@ -242,21 +263,26 @@ class Cart:
                         'seller_id': item.seller_id
                     })
 
-                # Update buyer's balance
+                # Update buyer's balance with the discounted total
                 conn.execute(text('''
                     UPDATE Users
                     SET balance = balance - :amount
                     WHERE id = :user_id
                 '''), {
-                    'amount': total_amount,
+                    'amount': final_total,
                     'user_id': user_id
                 })
 
-                # Clear cart
+                # Clear cart and applied coupons
                 conn.execute(text('''
                     DELETE FROM Cart_Items
                     WHERE cart_id IN (SELECT cart_id FROM Carts WHERE user_id = :user_id)
                 '''), {'user_id': user_id})
+                
+                # Clear applied coupons from session
+                if 'applied_coupons' in session:
+                    session.pop('applied_coupons')
+                    session.modified = True
 
                 print("Checkout completed successfully")
                 return {'success': True, 'message': 'Order placed successfully!', 'order_id': order_id}

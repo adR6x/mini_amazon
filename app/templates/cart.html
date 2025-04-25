@@ -5,9 +5,9 @@
   href="{{ url_for('static', filename='css/cart.css') }}"
 />
 <div class="container mt-4">
-    <div class="row mb-4">
+    <div class="row">
         <div class="col-12">
-            <h2>Your Cart</h2>
+            <h2 class="mb-4">Your Cart</h2>
         </div>
     </div>
     
@@ -58,12 +58,12 @@
         
         <div class="col-md-4">
             <div class="card" style="padding: 20px;">
-                <div class="card-header">
-                    <h5 class="mb-0">Order Summary</h5>
+                <div class="card-header" style="padding: 15px; margin-bottom: 20px;">
+                    <h4 class="mb-0">Order Summary</h4>
                 </div>
-                <div class="card-body">
+                <div class="card-body" style="padding: 0;">
                     <!-- Coupon Input -->
-                    <div class="mb-3">
+                    <div class="mb-4">
                         <form action="{{ url_for('cart.apply_coupon') }}" method="POST" class="d-flex">
                             <input type="text" name="coupon_code" class="form-control me-2" placeholder="Enter coupon code" required>
                             <button type="submit" class="btn btn-primary">Apply</button>
@@ -72,12 +72,12 @@
 
                     <!-- Applied Coupons -->
                     {% if applied_coupons %}
-                    <div class="mb-3">
-                        <h6>Applied Coupons:</h6>
+                    <div class="mb-4">
+                        <h5>Applied Coupons:</h5>
                         {% for coupon in applied_coupons %}
-                        <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
                             <span>
-                                {{ coupon.code }} ({{ coupon.seller_name }})
+                                {{ coupon.code }}
                                 <small class="text-success">-${{ "%.2f"|format(coupon.discount_amount) }}</small>
                             </span>
                             <form action="{{ url_for('cart.remove_coupon', coupon_id=coupon.id) }}" method="POST" class="d-inline">
@@ -89,30 +89,34 @@
                     {% endif %}
 
                     <!-- Order Summary -->
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Subtotal:</span>
-                        <span>${{ "%.2f"|format(total_amount) }}</span>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="h5">Subtotal:</span>
+                        <span class="h5">${{ "%.2f"|format(total_amount) }}</span>
                     </div>
                     {% if total_discount > 0 %}
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Discount:</span>
-                        <span class="text-success">-${{ "%.2f"|format(total_discount) }}</span>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="h5">Discount:</span>
+                        <span class="h5 text-success">-${{ "%.2f"|format(total_discount) }}</span>
                     </div>
                     {% endif %}
-                    <div class="d-flex justify-content-between mb-3">
-                        <span><strong>Total:</strong></span>
-                        <span><strong>${{ "%.2f"|format(total) }}</strong></span>
+                    <div class="d-flex justify-content-between mb-4">
+                        <span class="h4"><strong>Total:</strong></span>
+                        <span class="h4"><strong>${{ "%.2f"|format(total) }}</strong></span>
                     </div>
                     <form id="checkoutForm" action="{{ url_for('cart.checkout') }}" method="POST">
-                        <button type="submit" class="btn btn-primary w-100">Proceed to Checkout</button>
+                        <button type="submit" class="btn btn-primary w-100" style="padding: 12px; font-size: 1.1em;">Proceed to Checkout</button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
     {% else %}
-    <div class="alert alert-info">
-        Your cart is empty. <a href="{{ url_for('product.product_all') }}">Continue shopping</a>
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info">
+                Your cart is empty. <a href="{{ url_for('product.product_all') }}">Continue shopping</a>
+            </div>
+        </div>
     </div>
     {% endif %}
 </div>

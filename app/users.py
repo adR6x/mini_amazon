@@ -169,14 +169,14 @@ def account():
             WHERE id = :id
         ''', id=current_user.id)[0]
         
-        # Convert Row to dictionary
+        # Convert Row to dictionary and handle None balance
         user_details = {
             'id': user_row.id,
             'email': user_row.email,
             'firstname': user_row.firstname,
             'lastname': user_row.lastname,
             'address': user_row.address,
-            'balance': user_row.balance
+            'balance': user_row.balance if user_row.balance is not None else 0.00
         }
 
         # Debug: Check inventory
