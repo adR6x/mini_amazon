@@ -14,6 +14,38 @@
         </div>
     </div>
     
+    <form method="get" class="row g-3 mb-4">
+        <div class="col-md-2">
+            <label>Status</label>
+            <select name="status" class="form-select">
+                <option value="">All</option>
+                <option value="fulfilled" {% if request.args.get('status') == 'fulfilled' %}selected{% endif %}>Fulfilled</option>
+                <option value="pending" {% if request.args.get('status') == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="cancelled" {% if request.args.get('status') == 'cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label>Sort by Amount</label>
+            <select name="sort_amount" class="form-select">
+                <option value="">None</option>
+                <option value="asc" {% if request.args.get('sort_amount') == 'asc' %}selected{% endif %}>Lowest First</option>
+                <option value="desc" {% if request.args.get('sort_amount') == 'desc' %}selected{% endif %}>Highest First</option>
+            </select>
+        </div>        
+        <div class="col-md-2">
+            <label>Date From</label>
+            <input type="date" name="date_from" class="form-control" value="{{ request.args.get('date_from', '') }}">
+        </div>
+        <div class="col-md-2">
+            <label>Date To</label>
+            <input type="date" name="date_to" class="form-control" value="{{ request.args.get('date_to', '') }}">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">Apply</button>
+        </div>
+    </form>
+    
+
     {% if orders %}
         <div class="table-responsive">
             <table class="table table-striped">
@@ -76,10 +108,21 @@
             </nav>
         </div>
     {% else %}
-        <div class="alert alert-info">
+    <div class="alert alert-info">
+        {% if request.args.get('date_from') or request.args.get('date_to') %}
+            No purchases in this period.
+        {% elif request.args.get('status') == 'pending' %}
+            No pending purchases.
+        {% elif request.args.get('status') == 'cancelled' %}
+            No cancelled purchases.
+        {% elif request.args.get('status') == 'fulfilled' %}
+            No fulfilled purchases.
+        {% else %}
             You haven't made any purchases yet.
-        </div>
+        {% endif %}
+    </div>
     {% endif %}
+        
 </div>
 
 <script>
