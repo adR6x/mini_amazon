@@ -3,17 +3,25 @@
 {% block content %}
 <br><br>
 
-<form class="d-flex mb-3 pb-3" method="get" action="{{ url_for('inventory.inventory_page') }}">
-  <input class="form-control me-2" type="search" name="search" placeholder="Search by description" value="{{ search_query }}">
-  <select class="form-control me-2" name="category">
+<form class="d-flex flex-wrap mb-3 pb-3" method="get" action="{{ url_for('inventory.inventory_page') }}">
+  <input class="form-control me-2 mb-2" type="search" name="search" placeholder="Search for inventory" value="{{ search_query }}" style="flex: 1; min-width: 150px;">
+  <select class="form-control me-2 mb-2" name="category" style="flex: 1; min-width: 150px;">
     <option value="">All Categories</option>
     {% for category in categories %}
     <option value="{{ category.id }}" {% if category.id == category_id %}selected{% endif %}>{{ category.name }}</option>
     {% endfor %}
   </select>
-  <input class="form-control me-2" type="number" name="min_price" placeholder="Min Price" value="{{ min_price }}">
-  <input class="form-control me-2" type="number" name="max_price" placeholder="Max Price" value="{{ max_price }}">
-  <button class="btn btn-outline-success" type="submit">Filter</button>
+  <input class="form-control me-2 mb-2" type="number" name="min_price" placeholder="Min Price" value="{{ min_price }}" style="width: 100px;">
+  <input class="form-control me-2 mb-2" type="number" name="max_price" placeholder="Max Price" value="{{ max_price }}" style="width: 100px;">
+  <select class="form-control me-2 mb-2" name="sort_by" style="flex: 1; min-width: 150px;">
+    <option value="price" {% if sort_by == 'price' %}selected{% endif %}>Sort by Price</option>
+    <option value="quantity_available" {% if sort_by == 'quantity_available' %}selected{% endif %}>Sort by Quantity</option>
+  </select>
+  <select class="form-control me-2 mb-2" name="sort_order" style="flex: 1; min-width: 150px;">
+    <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
+    <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
+  </select>
+  <button class="btn btn-outline-success mb-2" type="submit" style="flex: 1; min-width: 150px;">Filter & Sort</button>
 </form>
 
 <div class="d-flex justify-content-between align-items-center" style="margin-top: -20px;">
@@ -44,14 +52,14 @@
 
   <!-- Pagination Controls -->
   <div class="d-flex justify-content-center mt-3">
-    <button class="btn btn-secondary" {% if page <= 1 %}disabled{% endif %} onclick="window.location.href='?page={{ page - 1 }}&search={{ search_query }}&category={{ category_id }}&min_price={{ min_price }}&max_price={{ max_price }}'">Previous</button>
+    <button class="btn btn-secondary" {% if page <= 1 %}disabled{% endif %} onclick="window.location.href='?page={{ page - 1 }}&search={{ search_query }}&category={{ category_id }}&min_price={{ min_price }}&max_price={{ max_price }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}'">Previous</button>
     <span class="mx-3">Page {{ page }} of {{ total_pages }}</span>
-    <button class="btn btn-secondary" {% if page >= total_pages %}disabled{% endif %} onclick="window.location.href='?page={{ page + 1 }}&search={{ search_query }}&category={{ category_id }}&min_price={{ min_price }}&max_price={{ max_price }}'">Next</button>
+    <button class="btn btn-secondary" {% if page >= total_pages %}disabled{% endif %} onclick="window.location.href='?page={{ page + 1 }}&search={{ search_query }}&category={{ category_id }}&min_price={{ min_price }}&max_price={{ max_price }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}'">Next</button>
   </div>
 
   {% else %}
-  <div class="alert alert-info mt-3 flex-grow-1" role="alert">
-    You currently have no products in your inventory.
+  <div class="alert alert-info mt-3" role="alert">
+    No Inventory Matched Your Search
   </div>
   {% endif %}
 </div>

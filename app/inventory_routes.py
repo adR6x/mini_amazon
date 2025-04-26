@@ -13,12 +13,14 @@ def inventory_page():
     category_id = request.args.get('category', type=int)
     min_price = request.args.get('min_price', type=float)
     max_price = request.args.get('max_price', type=float)
+    sort_by = request.args.get('sort_by', 'price', type=str)
+    sort_order = request.args.get('sort_order', 'asc', type=str)
     items_per_page = 9
 
     categories = Inventory.get_all_categories()
 
-    total_items, inventory_items = Inventory.filter_inventory(
-        current_user.id, search_query, category_id, min_price, max_price, page, items_per_page
+    total_items, inventory_items = Inventory.filter_and_sort_inventory(
+        current_user.id, search_query, category_id, min_price, max_price, sort_by, sort_order, page, items_per_page
     )
 
     total_pages = (total_items + items_per_page - 1) // items_per_page
@@ -26,7 +28,7 @@ def inventory_page():
     return render_template(
         'inventory.html', inventory_items=inventory_items, page=page, total_pages=total_pages,
         search_query=search_query, category_id=category_id, min_price=min_price, max_price=max_price,
-        categories=categories
+        sort_by=sort_by, sort_order=sort_order, categories=categories
     )
 
 @inventory_bp.route('/inventory/add', methods=['POST'])
@@ -65,11 +67,13 @@ def show_add_inventory_form():
 @inventory_bp.route('/inventory/item/<int:product_id>', methods=['GET'])
 def inventory_detail(product_id):
     item = Inventory.get_inventory_detail(product_id)
-
     categories = Inventory.get_all_categories()
 
+    # Fetch reviews and average rating
+    reviews, average_rating = Inventory.get_product_reviews_and_rating(product_id)
+
     if item:
-        return render_template('inventory_detail.html', item=item, categories=categories)
+        return render_template('inventory_detail.html', item=item, categories=categories, reviews=reviews, average_rating=average_rating)
     else:
         return "Item not found", 404
 
