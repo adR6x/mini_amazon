@@ -172,3 +172,25 @@ class Inventory:
             DELETE FROM Products
             WHERE seller_id = :seller_id AND product_id = :product_id
         ''', seller_id=seller_id, product_id=product_id)
+
+    @staticmethod
+    def search_inventory_by_description(seller_id, search_query, page, items_per_page):
+        offset = (page - 1) * items_per_page
+        rows = app.db.execute('''
+            SELECT i.seller_id, i.product_id, p.name, i.quantity_available, i.price
+            FROM Inventory i
+            JOIN Products p ON i.product_id = p.product_id
+            WHERE i.seller_id = :seller_id AND (p.description ILIKE '%' || :search_query || '%' OR p.name ILIKE '%' || :search_query || '%')
+            LIMIT :items_per_page OFFSET :offset
+        ''', seller_id=seller_id, search_query=search_query, items_per_page=items_per_page, offset=offset)
+        return [Inventory(*row) for row in rows] if rows else []
+
+    @staticmethod
+    def get_total_inventory_count_by_description(seller_id, search_query):
+        result = app.db.execute('''
+            SELECT COUNT(*)
+            FROM Inventory i
+            JOIN Products p ON i.product_id = p.product_id
+            WHERE i.seller_id = :seller_id AND p.description ILIKE '%' || :search_query || '%'
+        ''', seller_id=seller_id, search_query=search_query)
+        return result[0][0] if result else 0

@@ -9,15 +9,19 @@ inventory_bp = Blueprint('inventory', __name__)
 @inventory_bp.route('/inventory', methods=['GET'])
 def inventory_page():
     page = request.args.get('page', 1, type=int)
+    search_query = request.args.get('search', '', type=str)
     items_per_page = 9
-    total_items = Inventory.get_total_inventory_count(current_user.id)
+
+    if search_query:
+        total_items = Inventory.get_total_inventory_count_by_description(current_user.id, search_query)
+        inventory_items = Inventory.search_inventory_by_description(current_user.id, search_query, page, items_per_page)
+    else:
+        total_items = Inventory.get_total_inventory_count(current_user.id)
+        inventory_items = Inventory.get_inventory_items(current_user.id, page, items_per_page)
+
     total_pages = (total_items + items_per_page - 1) // items_per_page
-    # print(page)
-    # print(items_per_page)
-    inventory_items = Inventory.get_inventory_items(current_user.id, page, items_per_page)
-    # print(inventory_items)
-    
-    return render_template('inventory.html', inventory_items=inventory_items, page=page, total_pages=total_pages)
+
+    return render_template('inventory.html', inventory_items=inventory_items, page=page, total_pages=total_pages, search_query=search_query)
 
 @inventory_bp.route('/inventory/add', methods=['POST'])
 def add_inventory():
