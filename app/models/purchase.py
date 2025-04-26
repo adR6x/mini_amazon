@@ -61,21 +61,15 @@ ORDER BY time_purchased DESC
         ]
     
     @staticmethod
-    def get_orders_summary_by_user(uid, page=1, per_page=10, status=None, min_amount=None, max_amount=None, date_from=None, date_to=None, sort_amount=None):
+    def get_orders_summary_by_user(uid, page=1, per_page=10, status=None, sort_amount=None, date_from=None, date_to=None):
         """Fetch all orders where the user is the buyer with pagination."""
         offset = (page - 1) * per_page
         filters = ["o.buyer_id = :uid"]
         params = {"uid": uid, "limit": per_page, "offset": offset}
-
+        
         if status:
             filters.append("o.fulfillment_status = :status")
             params["status"] = status
-        if min_amount:
-            filters.append("o.total_amount >= :min_amount")
-            params["min_amount"] = float(min_amount)
-        if max_amount:
-            filters.append("o.total_amount <= :max_amount")
-            params["max_amount"] = float(max_amount)
         if date_from:
             filters.append("DATE(o.created_at) >= :date_from")
             params["date_from"] = date_from
@@ -84,17 +78,6 @@ ORDER BY time_purchased DESC
             params["date_to"] = date_to
 
         where_clause = " AND ".join(filters)
-
-        # Count total
-        count_query = f'''
-            SELECT COUNT(DISTINCT o.order_id)
-            FROM Orders o
-            JOIN Order_Items oi ON o.order_id = oi.order_id
-            WHERE {where_clause}
-        '''
-        count_rows = app.db.execute(count_query, **params)
-        total_count = count_rows[0][0] if count_rows else 0
-
         
         # Get total count
         #count_rows = app.db.execute('''
@@ -102,32 +85,25 @@ ORDER BY time_purchased DESC
         #    FROM Orders o
         #    WHERE o.buyer_id = :uid
         #''', uid=uid)
-        #total_count = count_rows[0][0] if count_rows else 0
-        
-        # Get paginated results
-        #rows = app.db.execute('''
-        #    SELECT 
-        #        o.order_id,
-        #        o.total_amount,
-        #        COUNT(oi.order_item_id) AS item_count,
-        #        o.fulfillment_status,
-        #        o.created_at
-        #    FROM Orders o
-        #    JOIN Order_Items oi ON o.order_id = oi.order_id
-        #    WHERE o.buyer_id = :uid
-        #    GROUP BY o.order_id, o.total_amount, o.fulfillment_status, o.created_at
-        #    ORDER BY o.created_at DESC
-        #    LIMIT :limit OFFSET :offset
-        #''', uid=uid, limit=per_page, offset=offset)
-        # Determine sort order
-        #sort_amount = params.pop('sort_amount', None)
 
+        count_query = f'''
+            SELECT COUNT(DISTINCT o.order_id)
+            FROM Orders o
+            JOIN Order_Items oi ON o.order_id = oi.order_id
+            WHERE {where_clause}
+        '''
+        count_rows = app.db.execute(count_query, **params)
+
+        total_count = count_rows[0][0] if count_rows else 0
+        
+        # Determine sort order
         order_clause = "o.created_at DESC"  # default
         if sort_amount == "asc":
             order_clause = "o.total_amount ASC"
         elif sort_amount == "desc":
             order_clause = "o.total_amount DESC"
 
+        # Get paginated results
         rows = app.db.execute(f'''
             SELECT 
                 o.order_id,
@@ -138,11 +114,12 @@ ORDER BY time_purchased DESC
             FROM Orders o
             JOIN Order_Items oi ON o.order_id = oi.order_id
             WHERE {where_clause}
+            WHERE {where_clause}
             GROUP BY o.order_id, o.total_amount, o.fulfillment_status, o.created_at
+            ORDER BY {order_clause}
             ORDER BY {order_clause}
             LIMIT :limit OFFSET :offset
         ''', **params)
-
 
         orders = [
             {
