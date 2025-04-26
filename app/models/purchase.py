@@ -114,9 +114,7 @@ ORDER BY time_purchased DESC
             FROM Orders o
             JOIN Order_Items oi ON o.order_id = oi.order_id
             WHERE {where_clause}
-            WHERE {where_clause}
             GROUP BY o.order_id, o.total_amount, o.fulfillment_status, o.created_at
-            ORDER BY {order_clause}
             ORDER BY {order_clause}
             LIMIT :limit OFFSET :offset
         ''', **params)
