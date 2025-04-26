@@ -71,19 +71,25 @@ class Cart:
             return None
 
     @staticmethod
-    def get_cart_items(user_id):
+    def get_cart_items(user_id, status='in_cart'):
+        """Get cart items with optional status filter."""
         try:
-            print(f"Getting cart items for user: {user_id}")
+            print(f"Getting cart items for user: {user_id} with status: {status}")
             query = '''
                 SELECT ci.cart_item_id, ci.product_id, p.name AS product_name, 
-                       ci.quantity, ci.unit_price, ci.added_at
+                       ci.quantity, ci.unit_price, ci.added_at, ci.status, ci.saved_at,
+                       COALESCE(i.quantity_available, 0) as quantity_available
                 FROM Cart_Items ci
                 JOIN Carts c ON ci.cart_id = c.cart_id
                 JOIN Products p ON ci.product_id = p.product_id
+                LEFT JOIN Inventory i ON ci.product_id = i.product_id AND ci.seller_id = i.seller_id
                 WHERE c.user_id = :user_id
+                AND ci.status = :status
+                ORDER BY 
+                    CASE WHEN :status = 'saved_for_later' THEN ci.saved_at ELSE ci.added_at END DESC
             '''
             print(f"Executing get_cart_items query: {query}")
-            rows = app.db.execute(query, user_id=user_id)
+            rows = app.db.execute(query, user_id=user_id, status=status)
             print(f"Found {len(rows) if rows else 0} items")
             return rows
         except Exception as e:
@@ -124,19 +130,12 @@ class Cart:
     @staticmethod
     def checkout(user_id):
         try:
-            print(f"Starting Cart.checkout for user_id: {user_id}")
-            
-            # First, check if the user has a cart
-            cart = app.db.execute('''
-                SELECT cart_id 
-                FROM Carts 
-                WHERE user_id = :user_id
-            ''', user_id=user_id)
-            print(f"Found cart: {cart}")
-            
+            print("Starting Cart.checkout for user_id:", user_id)
+            cart = Cart.get_cart_by_user(user_id)
             if not cart:
-                print("No cart found for user")
-                return {'success': False, 'message': 'No cart found. Please add items to your cart first.'}
+                print("No cart found")
+                return {'success': False, 'message': 'Cart not found.'}
+            print("Found cart:", cart)
             
             with app.db.engine.begin() as conn:
                 # Get cart items with product and inventory info
@@ -149,15 +148,24 @@ class Cart:
                         ci.quantity,
                         ci.unit_price,
                         ci.seller_id,
-                        COALESCE(i.quantity_available, 0) as quantity_available
+                        i.quantity_available,
+                        i.seller_id as inventory_seller_id
                     FROM Cart_Items ci
                     JOIN Carts c ON ci.cart_id = c.cart_id
                     JOIN Products p ON ci.product_id = p.product_id
-                    LEFT JOIN Inventory i ON ci.product_id = i.product_id AND ci.seller_id = i.seller_id
+                    JOIN Inventory i ON ci.product_id = i.product_id 
                     WHERE c.user_id = :user_id
+                    AND ci.status = 'in_cart'
+                    AND ci.seller_id = i.seller_id
                 '''), {'user_id': user_id}).fetchall()
-                print(f"Found {len(cart_items) if cart_items else 0} items with inventory")
-                print("Cart items details:", cart_items)
+                
+                print("Detailed cart items:")
+                for item in cart_items:
+                    print(f"Item: {item.product_name}")
+                    print(f"  - Quantity requested: {item.quantity}")
+                    print(f"  - Quantity available: {item.quantity_available}")
+                    print(f"  - Seller ID in cart: {item.seller_id}")
+                    print(f"  - Seller ID in inventory: {item.inventory_seller_id}")
 
                 if not cart_items:
                     print("Cart is empty")
@@ -277,6 +285,7 @@ class Cart:
                 conn.execute(text('''
                     DELETE FROM Cart_Items
                     WHERE cart_id IN (SELECT cart_id FROM Carts WHERE user_id = :user_id)
+                    AND status = 'in_cart'
                 '''), {'user_id': user_id})
                 
                 # Clear applied coupons from session
@@ -423,3 +432,33 @@ class Cart:
         except Exception as e:
             print(f"Error getting user address: {str(e)}")
             return None
+
+    @staticmethod
+    def move_to_saved_for_later(cart_item_id):
+        """Move an item from cart to saved for later."""
+        try:
+            app.db.execute('''
+                UPDATE Cart_Items
+                SET status = 'saved_for_later',
+                    saved_at = CURRENT_TIMESTAMP
+                WHERE cart_item_id = :cart_item_id
+            ''', cart_item_id=cart_item_id)
+            return True
+        except Exception as e:
+            print(f"Error moving to saved for later: {str(e)}")
+            return False
+
+    @staticmethod
+    def move_to_cart(cart_item_id):
+        """Move an item from saved for later back to cart."""
+        try:
+            app.db.execute('''
+                UPDATE Cart_Items
+                SET status = 'in_cart',
+                    saved_at = NULL
+                WHERE cart_item_id = :cart_item_id
+            ''', cart_item_id=cart_item_id)
+            return True
+        except Exception as e:
+            print(f"Error moving to cart: {str(e)}")
+            return False

@@ -47,6 +47,8 @@ CREATE TABLE Cart_Items (
     quantity INT NOT NULL CHECK (quantity > 0),
     unit_price DECIMAL(12,2) NOT NULL CHECK (unit_price >= 0),
     added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) NOT NULL DEFAULT 'in_cart' CHECK (status IN ('in_cart', 'saved_for_later')),
+    saved_at TIMESTAMP,
     CONSTRAINT unique_cart_item UNIQUE (cart_id, product_id)
 );
 

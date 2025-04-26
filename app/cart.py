@@ -15,17 +15,15 @@ cart = Blueprint('cart', __name__)
 def cart_page():
     try:
         # Fetch cart items for the logged-in user
-        cart_items = Cart.get_cart_items(current_user.id)
+        cart_items = Cart.get_cart_items(current_user.id, status='in_cart')
+        saved_items = Cart.get_cart_items(current_user.id, status='saved_for_later')
 
-        # Calculate total amount - cart_items contains Row objects, not custom objects
-        total_amount = sum(item[3] * item[4]
-                           for item in cart_items) if cart_items else 0
-        # Indexes: 3 = quantity, 4 = unit_price
+        # Calculate total amount for cart items
+        total_amount = sum(item[3] * item[4] for item in cart_items) if cart_items else 0
 
         # Add total_price to each cart item
         enhanced_cart_items = []
         for item in cart_items:
-            # Convert the Row to a dict and add the total_price
             item_dict = {
                 'cart_item_id': item[0],
                 'product_id': item[1],
@@ -33,9 +31,28 @@ def cart_page():
                 'quantity': item[3],
                 'unit_price': item[4],
                 'added_at': item[5],
-                'total_price': item[3] * item[4]  # quantity * unit_price
+                'status': item[6],
+                'total_price': item[3] * item[4],
+                'quantity_available': item[8]
             }
             enhanced_cart_items.append(item_dict)
+
+        # Add total_price to each saved item
+        enhanced_saved_items = []
+        for item in saved_items:
+            item_dict = {
+                'cart_item_id': item[0],
+                'product_id': item[1],
+                'product_name': item[2],
+                'quantity': item[3],
+                'unit_price': item[4],
+                'added_at': item[5],
+                'status': item[6],
+                'saved_at': item[7],
+                'total_price': item[3] * item[4],
+                'quantity_available': item[8]
+            }
+            enhanced_saved_items.append(item_dict)
 
         # Get user's address
         user_address = Cart.get_user_address(current_user.id)
@@ -55,12 +72,12 @@ def cart_page():
                     JOIN Products p ON ci.product_id = p.product_id
                     JOIN Inventory i ON ci.product_id = i.product_id
                     WHERE c.user_id = :user_id
+                    AND ci.status = 'in_cart'
                 """, user_id=current_user.id)
 
                 # Calculate discount for this seller's products
                 seller_items = [item for item in cart_items_with_seller if item[6] == coupon['seller_id']]
                 seller_subtotal = sum(item[3] * item[4] for item in seller_items)
-                # Convert discount_amount to Decimal for consistent type handling
                 discount_amount = min(seller_subtotal, Decimal(str(coupon['discount_amount'])))
                 
                 applied_coupons.append({
@@ -74,12 +91,13 @@ def cart_page():
         total = total_amount - total_discount
 
         return render_template('cart.html',
-                               cart_items=enhanced_cart_items,
-                               total_amount=round(total_amount, 2),
-                               user_address=user_address,
-                               total_discount=round(total_discount, 2),
-                               total=round(total, 2),
-                               applied_coupons=applied_coupons)
+                           cart_items=enhanced_cart_items,
+                           saved_items=enhanced_saved_items,
+                           total_amount=round(total_amount, 2),
+                           user_address=user_address,
+                           total_discount=round(total_discount, 2),
+                           total=round(total, 2),
+                           applied_coupons=applied_coupons)
     except Exception as e:
         import traceback
         print(f"Error in cart_page: {str(e)}")
@@ -375,3 +393,39 @@ def remove_coupon(coupon_id):
         print(traceback.format_exc())
         flash('Error removing coupon', 'error')
         return redirect(url_for('cart.cart_page'))
+
+
+@cart.route('/move_to_saved', methods=['POST'])
+@login_required
+def move_to_saved():
+    try:
+        cart_item_id = request.form.get('cart_item_id')
+        if not cart_item_id:
+            return jsonify({'success': False, 'message': 'Invalid request'}), 400
+
+        success = Cart.move_to_saved_for_later(cart_item_id)
+        if success:
+            return jsonify({'success': True, 'message': 'Item moved to saved for later!'}), 200
+        else:
+            return jsonify({'success': False, 'message': 'Failed to move item.'}), 500
+    except Exception as e:
+        print(f"Error in move_to_saved: {str(e)}")
+        return jsonify({'success': False, 'message': 'An error occurred'}), 500
+
+
+@cart.route('/move_to_cart', methods=['POST'])
+@login_required
+def move_to_cart():
+    try:
+        cart_item_id = request.form.get('cart_item_id')
+        if not cart_item_id:
+            return jsonify({'success': False, 'message': 'Invalid request'}), 400
+
+        success = Cart.move_to_cart(cart_item_id)
+        if success:
+            return jsonify({'success': True, 'message': 'Item moved to cart!'}), 200
+        else:
+            return jsonify({'success': False, 'message': 'Failed to move item.'}), 500
+    except Exception as e:
+        print(f"Error in move_to_cart: {str(e)}")
+        return jsonify({'success': False, 'message': 'An error occurred'}), 500
