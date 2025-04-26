@@ -5,7 +5,15 @@
 
 <form class="d-flex mb-3 pb-3" method="get" action="{{ url_for('inventory.inventory_page') }}">
   <input class="form-control me-2" type="search" name="search" placeholder="Search by description" value="{{ search_query }}">
-  <button class="btn btn-outline-success" type="submit">Search</button>
+  <select class="form-control me-2" name="category">
+    <option value="">All Categories</option>
+    {% for category in categories %}
+    <option value="{{ category.id }}" {% if category.id == category_id %}selected{% endif %}>{{ category.name }}</option>
+    {% endfor %}
+  </select>
+  <input class="form-control me-2" type="number" name="min_price" placeholder="Min Price" value="{{ min_price }}">
+  <input class="form-control me-2" type="number" name="max_price" placeholder="Max Price" value="{{ max_price }}">
+  <button class="btn btn-outline-success" type="submit">Filter</button>
 </form>
 
 <div class="d-flex justify-content-between align-items-center" style="margin-top: -20px;">
@@ -36,9 +44,9 @@
 
   <!-- Pagination Controls -->
   <div class="d-flex justify-content-center mt-3">
-    <button class="btn btn-secondary" {% if page <= 1 %}disabled{% endif %} onclick="window.location.href='?page={{ page - 1 }}&search={{ search_query }}'">Previous</button>
+    <button class="btn btn-secondary" {% if page <= 1 %}disabled{% endif %} onclick="window.location.href='?page={{ page - 1 }}&search={{ search_query }}&category={{ category_id }}&min_price={{ min_price }}&max_price={{ max_price }}'">Previous</button>
     <span class="mx-3">Page {{ page }} of {{ total_pages }}</span>
-    <button class="btn btn-secondary" {% if page >= total_pages %}disabled{% endif %} onclick="window.location.href='?page={{ page + 1 }}&search={{ search_query }}'">Next</button>
+    <button class="btn btn-secondary" {% if page >= total_pages %}disabled{% endif %} onclick="window.location.href='?page={{ page + 1 }}&search={{ search_query }}&category={{ category_id }}&min_price={{ min_price }}&max_price={{ max_price }}'">Next</button>
   </div>
 
   {% else %}

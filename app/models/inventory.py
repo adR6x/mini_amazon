@@ -194,3 +194,36 @@ class Inventory:
             WHERE i.seller_id = :seller_id AND p.description ILIKE '%' || :search_query || '%'
         ''', seller_id=seller_id, search_query=search_query)
         return result[0][0] if result else 0
+
+    @staticmethod
+    def filter_inventory(seller_id, search_query, category_id, min_price, max_price, page, items_per_page):
+        offset = (page - 1) * items_per_page
+        query = '''
+            SELECT i.seller_id, i.product_id, p.name, i.quantity_available, i.price
+            FROM Inventory i
+            JOIN Products p ON i.product_id = p.product_id
+            WHERE i.seller_id = :seller_id
+        '''
+        params = {'seller_id': seller_id}
+
+        if search_query:
+            query += " AND (p.description ILIKE '%' || :search_query || '%' OR p.name ILIKE '%' || :search_query || '%')"
+            params['search_query'] = search_query
+        if category_id:
+            query += " AND p.category_id = :category_id"
+            params['category_id'] = category_id
+        if min_price is not None:
+            query += " AND i.price >= :min_price"
+            params['min_price'] = min_price
+        if max_price is not None:
+            query += " AND i.price <= :max_price"
+            params['max_price'] = max_price
+
+        total_query = 'SELECT COUNT(*) FROM (' + query + ') AS total'
+        total_items = app.db.execute(total_query, **params)[0][0]
+
+        query += " LIMIT :items_per_page OFFSET :offset"
+        params.update({'items_per_page': items_per_page, 'offset': offset})
+        rows = app.db.execute(query, **params)
+
+        return total_items, [Inventory(*row) for row in rows] if rows else []
