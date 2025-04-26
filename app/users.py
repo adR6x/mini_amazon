@@ -16,6 +16,9 @@ from .models.user import User
 from .models.product import Product
 from .models.seller_review import SellerReview
 
+from psycopg2.errors import UniqueViolation
+import sqlalchemy.exc
+
 from flask import Blueprint
 bp = Blueprint('users', __name__)
 
@@ -158,8 +161,15 @@ def account():
                 ''', id=current_user.id, firstname=new_firstname, lastname=new_lastname, email=new_email, address=new_address, balance=new_balance)
 
             flash("Profile updated successfully!", "success")
+        except sqlalchemy.exc.IntegrityError as e:
+            if isinstance(e.orig, UniqueViolation) and 'users_email_key' in str(e.orig):
+                flash("This email is already registered with another account.", "danger")
+            else:
+                flash("Error updating profile: " + str(e), "danger")
         except Exception as e:
-            flash("Error updating profile: " + str(e), "danger")
+            flash("Unexpected error: " + str(e), "danger")
+        #except Exception as e:
+        #    flash("Error updating profile: " + str(e), "danger")
 
     # Fetch the current user details
     try:
