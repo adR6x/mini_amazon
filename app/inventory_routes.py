@@ -1,12 +1,13 @@
 from flask import Blueprint, jsonify, flash, redirect, url_for
 from app.models.inventory import Inventory
-from flask_login import current_user
+from flask_login import current_user, login_required
 from flask import render_template, request
 
 
 inventory_bp = Blueprint('inventory', __name__)
 
 @inventory_bp.route('/inventory', methods=['GET'])
+@login_required
 def inventory_page():
     page = request.args.get('page', 1, type=int)
     search_query = request.args.get('search', '', type=str)
@@ -32,6 +33,7 @@ def inventory_page():
     )
 
 @inventory_bp.route('/inventory/add', methods=['POST'])
+@login_required
 def add_inventory():
     from flask_login import current_user
     data = request.get_json()
@@ -59,12 +61,14 @@ def add_inventory():
     return jsonify({"success": True, "product_id": product_id, "inventory_id": inventory_id}), 200
 
 @inventory_bp.route('/inventory/add', methods=['GET'])
+@login_required
 def show_add_inventory_form():
     categories = Inventory.get_all_categories()
     return render_template('inventory_add.html', categories=categories)
 
 
 @inventory_bp.route('/inventory/item/<int:product_id>', methods=['GET'])
+@login_required
 def inventory_detail(product_id):
     item = Inventory.get_inventory_detail(product_id)
     categories = Inventory.get_all_categories()
@@ -80,6 +84,7 @@ def inventory_detail(product_id):
 
 
 @inventory_bp.route('/inventory/item/<int:product_id>/update', methods=['POST'])
+@login_required
 def update_inventory_item(product_id):
     print("update inventory item")
     data = request.json
@@ -96,6 +101,7 @@ def update_inventory_item(product_id):
         return jsonify(success=False, message="Failed to update inventory item.")
 
 @inventory_bp.route('/inventory/item/<int:product_id>/delete', methods=['POST'])
+@login_required
 def delete_inventory_item(product_id):
     seller_id = current_user.id
 
