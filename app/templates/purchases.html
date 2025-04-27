@@ -21,7 +21,6 @@
                 <option value="">All</option>
                 <option value="fulfilled" {% if request.args.get('status') == 'fulfilled' %}selected{% endif %}>Fulfilled</option>
                 <option value="pending" {% if request.args.get('status') == 'pending' %}selected{% endif %}>Pending</option>
-                <option value="cancelled" {% if request.args.get('status') == 'cancelled' %}selected{% endif %}>Cancelled</option>
             </select>
         </div>
         <div class="col-md-2">
@@ -114,8 +113,6 @@
                 No purchases in this period.
             {% elif request.args.get('status') == 'pending' %}
                 No pending purchases.
-            {% elif request.args.get('status') == 'cancelled' %}
-                No cancelled purchases.
             {% elif request.args.get('status') == 'fulfilled' %}
                 No fulfilled purchases.
             {% else %}
