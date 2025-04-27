@@ -111,7 +111,8 @@ ORDER BY time_purchased DESC
         }
 
     @staticmethod
-    def get_seller_orders(seller_id, page=1, per_page=10):
+    def get_seller_orders(seller_id, sort_by, sort_order, page=1, per_page=10):
+        # print(f"Debug: Sorting by {sort_by} in {sort_order} order")
         """Fetch all orders where the user is the seller with pagination."""
         offset = (page - 1) * per_page
         
@@ -125,7 +126,7 @@ ORDER BY time_purchased DESC
         total_count = count_rows[0][0] if count_rows else 0
         
         # Get paginated results
-        rows = app.db.execute('''
+        rows = app.db.execute(f'''
             SELECT 
                 o.order_id,
                 o.total_amount,
@@ -138,9 +139,11 @@ ORDER BY time_purchased DESC
             JOIN Users u ON o.buyer_id = u.id
             WHERE oi.seller_id = :seller_id
             GROUP BY o.order_id, o.total_amount, o.fulfillment_status, o.created_at, u.firstname, u.lastname
-            ORDER BY o.created_at DESC
+            ORDER BY CASE o.fulfillment_status WHEN 'pending' THEN 1 WHEN 'partial' THEN 2 ELSE 3 END, {sort_by} {sort_order.upper()}
             LIMIT :per_page OFFSET :offset
         ''', seller_id=seller_id, per_page=per_page, offset=offset)
+
+        # print(f"Debug: Query result: {rows}")
 
         orders = [
             {
