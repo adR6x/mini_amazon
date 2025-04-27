@@ -615,3 +615,12 @@ def deactivate_coupon(coupon_id):
     except Exception as e:
         flash(f'Error deactivating coupon: {str(e)}', 'danger')
         return redirect(url_for('users.manage_coupons'))
+
+
+@bp.route('/revenue_trends', methods=['GET'])
+@login_required
+def revenue_trends():
+    # Fetch the revenue data for the current user
+    data = Purchase.get_revenue_trends(current_user.id)
+    print(f"Debug: Revenue data: {data}")
+    return render_template('revenue_trends.html', revenue_data=data)

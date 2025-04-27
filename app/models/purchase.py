@@ -232,3 +232,17 @@ ORDER BY time_purchased DESC
             }
             for row in rows
         ]
+    
+    @staticmethod
+    def get_revenue_trends(seller_id):
+        """Fetch total revenue generated over time for the current seller."""
+        rows = app.db.execute('''
+            SELECT DATE(o.created_at) AS date, SUM(oi.quantity * oi.unit_price) AS total_revenue
+            FROM Orders o
+            JOIN Order_Items oi ON o.order_id = oi.order_id
+            WHERE oi.seller_id = :seller_id
+            GROUP BY DATE(o.created_at)
+            ORDER BY DATE(o.created_at)
+        ''', seller_id=seller_id)
+        return [{"date": row[0].strftime("%m-%d"), "total_revenue": row[1]} for row in rows]
+
