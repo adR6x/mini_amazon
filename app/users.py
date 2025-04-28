@@ -16,6 +16,9 @@ from .models.user import User
 from .models.product import Product
 from .models.seller_review import SellerReview
 
+from psycopg2.errors import UniqueViolation
+import sqlalchemy.exc
+
 from flask import Blueprint
 bp = Blueprint('users', __name__)
 
@@ -94,8 +97,15 @@ def purchases():
     if per_page not in allowed_per_page:
         per_page = 10
     
+    filters = {
+        'status': request.args.get('status'),
+        'sort_amount': request.args.get('sort_amount'),
+        'date_from': request.args.get('date_from'),
+        'date_to': request.args.get('date_to')
+    }
+    
     # Fetch paginated purchases for the logged-in user
-    result = Purchase.get_orders_summary_by_user(current_user.id, page, per_page)
+    result = Purchase.get_orders_summary_by_user(current_user.id, page, per_page, **filters)
     
     return render_template('purchases.html',
                          orders=result['orders'],
@@ -103,7 +113,8 @@ def purchases():
                          total_pages=result['total_pages'],
                          per_page=result['per_page'],
                          total_count=result['total_count'],
-                         allowed_per_page=allowed_per_page)
+                         allowed_per_page=allowed_per_page,
+                         request=request)
 
 
 @bp.route('/account', methods=['GET', 'POST'])
@@ -150,8 +161,15 @@ def account():
                 ''', id=current_user.id, firstname=new_firstname, lastname=new_lastname, email=new_email, address=new_address, balance=new_balance)
 
             flash("Profile updated successfully!", "success")
+        except sqlalchemy.exc.IntegrityError as e:
+            if isinstance(e.orig, UniqueViolation) and 'users_email_key' in str(e.orig):
+                flash("This email is already registered with another account.", "danger")
+            else:
+                flash("Error updating profile: " + str(e), "danger")
         except Exception as e:
-            flash("Error updating profile: " + str(e), "danger")
+            flash("Unexpected error: " + str(e), "danger")
+        #except Exception as e:
+        #    flash("Error updating profile: " + str(e), "danger")
 
     # Fetch the current user details
     try:
@@ -252,6 +270,13 @@ def public_profile(user_id):
     user = user[0]
 
     # Check if this user is a seller (has at least 1 product listed)
+
+    #is_seller_result = app.db.execute('''
+    #    SELECT EXISTS (
+    #        SELECT 1 FROM Products WHERE seller_id = :id
+    #    ) AS is_seller
+    #''', id=user_id)
+
     is_seller_result = app.db.execute('''
         SELECT EXISTS (
             SELECT 1 FROM Products WHERE seller_id = :id
@@ -259,7 +284,6 @@ def public_profile(user_id):
     ''', id=user_id)
 
     is_seller = bool(is_seller_result[0][0])
-
 
     # Get seller reviews if seller
     reviews = []
