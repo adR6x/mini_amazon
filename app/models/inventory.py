@@ -172,3 +172,115 @@ class Inventory:
             DELETE FROM Products
             WHERE seller_id = :seller_id AND product_id = :product_id
         ''', seller_id=seller_id, product_id=product_id)
+
+    @staticmethod
+    def search_inventory_by_description(seller_id, search_query, page, items_per_page):
+        offset = (page - 1) * items_per_page
+        rows = app.db.execute('''
+            SELECT i.seller_id, i.product_id, p.name, i.quantity_available, i.price
+            FROM Inventory i
+            JOIN Products p ON i.product_id = p.product_id
+            WHERE i.seller_id = :seller_id AND (p.description ILIKE '%' || :search_query || '%' OR p.name ILIKE '%' || :search_query || '%')
+            LIMIT :items_per_page OFFSET :offset
+        ''', seller_id=seller_id, search_query=search_query, items_per_page=items_per_page, offset=offset)
+        return [Inventory(*row) for row in rows] if rows else []
+
+    @staticmethod
+    def get_total_inventory_count_by_description(seller_id, search_query):
+        result = app.db.execute('''
+            SELECT COUNT(*)
+            FROM Inventory i
+            JOIN Products p ON i.product_id = p.product_id
+            WHERE i.seller_id = :seller_id AND p.description ILIKE '%' || :search_query || '%'
+        ''', seller_id=seller_id, search_query=search_query)
+        return result[0][0] if result else 0
+
+    @staticmethod
+    def filter_inventory(seller_id, search_query, category_id, min_price, max_price, page, items_per_page):
+        offset = (page - 1) * items_per_page
+        query = '''
+            SELECT i.seller_id, i.product_id, p.name, i.quantity_available, i.price
+            FROM Inventory i
+            JOIN Products p ON i.product_id = p.product_id
+            WHERE i.seller_id = :seller_id
+        '''
+        params = {'seller_id': seller_id}
+
+        if search_query:
+            query += " AND (p.description ILIKE '%' || :search_query || '%' OR p.name ILIKE '%' || :search_query || '%')"
+            params['search_query'] = search_query
+        if category_id:
+            query += " AND p.category_id = :category_id"
+            params['category_id'] = category_id
+        if min_price is not None:
+            query += " AND i.price >= :min_price"
+            params['min_price'] = min_price
+        if max_price is not None:
+            query += " AND i.price <= :max_price"
+            params['max_price'] = max_price
+
+        total_query = 'SELECT COUNT(*) FROM (' + query + ') AS total'
+        total_items = app.db.execute(total_query, **params)[0][0]
+
+        query += " LIMIT :items_per_page OFFSET :offset"
+        params.update({'items_per_page': items_per_page, 'offset': offset})
+        rows = app.db.execute(query, **params)
+
+        return total_items, [Inventory(*row) for row in rows] if rows else []
+
+    @staticmethod
+    def get_product_reviews_and_rating(product_id):
+        # Fetch average rating
+        avg_rating_result = app.db.execute('''
+            SELECT AVG(rating) FROM Product_Reviews WHERE product_id = :product_id
+        ''', product_id=product_id)
+        average_rating = avg_rating_result[0][0] if avg_rating_result else None
+
+        # Fetch first 5 reviews
+        reviews_result = app.db.execute('''
+            SELECT reviewer_id, review_text, rating
+            FROM Product_Reviews
+            WHERE product_id = :product_id
+            ORDER BY created_at DESC
+            LIMIT 5
+        ''', product_id=product_id)
+        reviews = [{'reviewer_id': row[0], 'review_text': row[1], 'rating': row[2]} for row in reviews_result] if reviews_result else []
+
+        return reviews, average_rating
+
+    @staticmethod
+    def filter_and_sort_inventory(seller_id, search_query, category_id, min_price, max_price, sort_by, sort_order, page, items_per_page):
+        offset = (page - 1) * items_per_page
+        query = '''
+            SELECT i.seller_id, i.product_id, p.name, i.quantity_available, i.price
+            FROM Inventory i
+            JOIN Products p ON i.product_id = p.product_id
+            WHERE i.seller_id = :seller_id
+        '''
+        params = {'seller_id': seller_id}
+
+        if search_query:
+            query += " AND (p.description ILIKE '%' || :search_query || '%' OR p.name ILIKE '%' || :search_query || '%')"
+            params['search_query'] = search_query
+        if category_id:
+            query += " AND p.category_id = :category_id"
+            params['category_id'] = category_id
+        if min_price is not None:
+            query += " AND i.price >= :min_price"
+            params['min_price'] = min_price
+        if max_price is not None:
+            query += " AND i.price <= :max_price"
+            params['max_price'] = max_price
+
+        # Add sorting
+        if sort_by in ['price', 'quantity_available']:
+            query += f" ORDER BY i.{sort_by} {sort_order.upper()}"
+
+        total_query = 'SELECT COUNT(*) FROM (' + query + ') AS total'
+        total_items = app.db.execute(total_query, **params)[0][0]
+
+        query += " LIMIT :items_per_page OFFSET :offset"
+        params.update({'items_per_page': items_per_page, 'offset': offset})
+        rows = app.db.execute(query, **params)
+
+        return total_items, [Inventory(*row) for row in rows] if rows else []
