@@ -1,25 +1,39 @@
 from flask import Blueprint, jsonify, flash, redirect, url_for
 from app.models.inventory import Inventory
-from flask_login import current_user
+from flask_login import current_user, login_required
 from flask import render_template, request
 
 
 inventory_bp = Blueprint('inventory', __name__)
 
 @inventory_bp.route('/inventory', methods=['GET'])
+@login_required
 def inventory_page():
     page = request.args.get('page', 1, type=int)
+    search_query = request.args.get('search', '', type=str)
+    category_id = request.args.get('category', type=int)
+    min_price = request.args.get('min_price', type=float)
+    max_price = request.args.get('max_price', type=float)
+    sort_by = request.args.get('sort_by', 'price', type=str)
+    sort_order = request.args.get('sort_order', 'asc', type=str)
     items_per_page = 9
-    total_items = Inventory.get_total_inventory_count(current_user.id)
+
+    categories = Inventory.get_all_categories()
+
+    total_items, inventory_items = Inventory.filter_and_sort_inventory(
+        current_user.id, search_query, category_id, min_price, max_price, sort_by, sort_order, page, items_per_page
+    )
+
     total_pages = (total_items + items_per_page - 1) // items_per_page
-    # print(page)
-    # print(items_per_page)
-    inventory_items = Inventory.get_inventory_items(current_user.id, page, items_per_page)
-    # print(inventory_items)
-    
-    return render_template('inventory.html', inventory_items=inventory_items, page=page, total_pages=total_pages)
+
+    return render_template(
+        'inventory.html', inventory_items=inventory_items, page=page, total_pages=total_pages,
+        search_query=search_query, category_id=category_id, min_price=min_price, max_price=max_price,
+        sort_by=sort_by, sort_order=sort_order, categories=categories
+    )
 
 @inventory_bp.route('/inventory/add', methods=['POST'])
+@login_required
 def add_inventory():
     from flask_login import current_user
     data = request.get_json()
@@ -47,25 +61,30 @@ def add_inventory():
     return jsonify({"success": True, "product_id": product_id, "inventory_id": inventory_id}), 200
 
 @inventory_bp.route('/inventory/add', methods=['GET'])
+@login_required
 def show_add_inventory_form():
     categories = Inventory.get_all_categories()
     return render_template('inventory_add.html', categories=categories)
 
 
 @inventory_bp.route('/inventory/item/<int:product_id>', methods=['GET'])
+@login_required
 def inventory_detail(product_id):
     item = Inventory.get_inventory_detail(product_id)
-
     categories = Inventory.get_all_categories()
 
+    # Fetch reviews and average rating
+    reviews, average_rating = Inventory.get_product_reviews_and_rating(product_id)
+
     if item:
-        return render_template('inventory_detail.html', item=item, categories=categories)
+        return render_template('inventory_detail.html', item=item, categories=categories, reviews=reviews, average_rating=average_rating)
     else:
         return "Item not found", 404
 
 
 
 @inventory_bp.route('/inventory/item/<int:product_id>/update', methods=['POST'])
+@login_required
 def update_inventory_item(product_id):
     print("update inventory item")
     data = request.json
@@ -82,6 +101,7 @@ def update_inventory_item(product_id):
         return jsonify(success=False, message="Failed to update inventory item.")
 
 @inventory_bp.route('/inventory/item/<int:product_id>/delete', methods=['POST'])
+@login_required
 def delete_inventory_item(product_id):
     seller_id = current_user.id
 
