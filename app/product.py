@@ -126,24 +126,28 @@ def detail(product_id):
     if not product:
         abort(404)
 
-    # Fetch all reviews with upvote counts
+    # Fetch all reviews (each has .upvotes_count)
     reviews = ProductReview.get_by_product(product_id)
     count   = len(reviews)
     avg     = round(sum(r.rating for r in reviews) / count, 2) if count else None
 
-    # If the user is logged in, fetch their own review (for edit/delete UI)
+    # If the user is logged in, fetch their own review for edit/delete UI
     if current_user.is_authenticated:
         user_rev = ProductReview.get_by_user_and_product(
             current_user.id, product_id
         )
     else:
         user_rev = None
+    helpful_reviews = [r for r in reviews if r.upvotes_count > 0]
+    top3 = sorted(
+        helpful_reviews,
+        key=lambda r: r.upvotes_count,
+        reverse=True
+    )[:3]
+    rest = [r for r in reviews if r not in top3]
+    rest.sort(key=lambda r: r.created_at, reverse=True)
 
-    # Order: top 3 by upvotes, then the rest by creation date
-    top3 = sorted(reviews, key=lambda r: r.upvotes_count, reverse=True)[:3]
-    others = [r for r in reviews if r not in top3]
-    others.sort(key=lambda r: r.created_at, reverse=True)
-    ordered_reviews = top3 + others
+    ordered_reviews = top3 + rest
 
     return render_template(
         'product_detail.html',
