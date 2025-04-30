@@ -3,6 +3,7 @@ from flask_login import LoginManager
 from .config import Config
 from .db import DB
 from .cart import cart
+from .security import SecurityMiddleware
 
 login = LoginManager()
 login.login_view = 'users.login'
@@ -14,6 +15,9 @@ def create_app():
 
     app.db = DB(app)
     login.init_app(app)
+
+    # Add security middleware
+    SecurityMiddleware(app)
 
     from .index import bp as index_bp
     app.register_blueprint(index_bp)

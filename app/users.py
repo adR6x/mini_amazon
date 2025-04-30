@@ -56,7 +56,7 @@ class RegistrationForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()])
     password2 = PasswordField(
         'Repeat Password', validators=[DataRequired(),
-                                       EqualTo('password')])
+                                     EqualTo('password', message='Passwords must match')])
     submit = SubmitField('Register')
 
     def validate_email(self, email):
@@ -70,12 +70,17 @@ def register():
         return redirect(url_for('index.index'))
     form = RegistrationForm()
     if form.validate_on_submit():
-        if User.register(form.email.data,
-                         form.password.data,
-                         form.firstname.data,
-                         form.lastname.data):
-            flash('Congratulations, you are now a registered user!')
-            return redirect(url_for('users.login'))
+        try:
+            if User.register(form.email.data,
+                           form.password.data,
+                           form.firstname.data,
+                           form.lastname.data):
+                flash('Registration successful! You can now log in.', 'success')
+                return redirect(url_for('users.login'))
+            else:
+                flash('Registration failed. Please check your information and try again.', 'error')
+        except ValueError as e:
+            flash(str(e), 'error')  # This will show password strength errors
     return render_template('register.html', title='Register', form=form)
 
 
