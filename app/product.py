@@ -167,3 +167,18 @@ def add_review(product_id):
         flash('Review submitted!', 'success')
 
     return redirect(url_for('product.detail', product_id=product_id))
+
+@bp.route('/review/<int:review_id>/upvote', methods=['POST'])
+@login_required
+def upvote_review(review_id):
+    ProductReview.upvote(review_id, current_user.id)
+    flash('Marked as helpful 👍', 'success')
+    # redirect back to the product detail
+    return redirect(request.referrer or url_for('product.product_all'))
+
+@bp.route('/review/<int:review_id>/remove_upvote', methods=['POST'])
+@login_required
+def remove_upvote_review(review_id):
+    ProductReview.remove_upvote(review_id, current_user.id)
+    flash('Removed your vote', 'info')
+    return redirect(request.referrer or url_for('product.product_all'))

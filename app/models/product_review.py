@@ -5,7 +5,7 @@ from datetime import datetime
 
 class ProductReview:
     def __init__(self, review_id, product_id, reviewer_id, rating, review_text, image_url,
-                 created_at, updated_at, product_name=None, seller_name=None):
+                 created_at, updated_at, product_name=None, seller_name=None, upvotes_count=0):
         self.review_id = review_id
         self.product_id = product_id
         self.reviewer_id = reviewer_id
@@ -16,28 +16,29 @@ class ProductReview:
         self.updated_at = updated_at
         self.product_name = product_name
         self.seller_name = seller_name
+        self.upvotes_count = upvotes_count
 
     @staticmethod
     def get_by_product(product_id):
         rows = app.db.execute('''
             SELECT
-                pr.review_id,
-                pr.product_id,
-                pr.reviewer_id,
-                pr.rating,
-                pr.review_text,
-                pr.image_url,
-                pr.created_at,
-                pr.updated_at,
-                p.name AS product_name,
-                u.firstname || ' ' || u.lastname AS seller_name
+            pr.review_id, pr.product_id, pr.reviewer_id,
+            pr.rating, pr.review_text, pr.image_url,
+            pr.created_at, pr.updated_at,
+            p.name AS product_name,
+            u.firstname || ' ' || u.lastname AS seller_name,
+            COALESCE(up.count, 0) AS upvotes_count
             FROM Product_Reviews pr
             JOIN Products p ON pr.product_id = p.product_id
-            JOIN Users u ON p.seller_id = u.id
+            JOIN Users u    ON p.seller_id  = u.id
+            LEFT JOIN (
+            SELECT review_id, COUNT(*) AS count
+            FROM Product_Review_Upvotes
+            GROUP BY review_id
+            ) up ON up.review_id = pr.review_id
             WHERE pr.product_id = :product_id
-            ORDER BY pr.created_at DESC
-        ''',
-        product_id=product_id)
+            ''', product_id=product_id)
+
         return [ProductReview(*row) for row in rows]
 
     @staticmethod
@@ -154,3 +155,24 @@ class ProductReview:
         WHERE reviewer_id=:user_id AND product_id=:product_id
         ''', user_id=user_id, product_id=product_id)
         return ProductReview(*rows[0]) if rows else None
+    
+    @staticmethod
+    def upvote(review_id, user_id):
+        try:
+            app.db.execute('''
+            INSERT INTO Product_Review_Upvotes
+              (review_id, user_id)
+            VALUES
+              (:review_id, :user_id)
+            ''', review_id=review_id, user_id=user_id)
+        except IntegrityError:
+            # already up-voted—ignore or handle as you like
+            pass
+
+    @staticmethod
+    def remove_upvote(review_id, user_id):
+        app.db.execute('''
+        DELETE FROM Product_Review_Upvotes
+        WHERE review_id = :review_id
+          AND user_id   = :user_id
+        ''', review_id=review_id, user_id=user_id)
