@@ -4,7 +4,8 @@
   <div class="row">
     <div class="col-md-5">
       <img src="{{ product.image_url or url_for('static', filename='images/placeholder.png') }}"
-           class="img-fluid rounded" alt="{{ product.name }}">
+           class="img-fluid rounded"
+           alt="{{ product.name }}">
     </div>
     <div class="col-md-7">
       <h1>{{ product.name }}</h1>
@@ -14,28 +15,36 @@
       <hr>
       <h4>Rating summary</h4>
       {% if count %}
-        <p>{{ avg }} ★ average from {{ count }} review{{ 's' if count>1 }}</p>
+        <p>{{ avg }} ★ average from {{ count }} review{{ 's' if count > 1 }}</p>
       {% else %}
         <p>No reviews yet.</p>
       {% endif %}
 
       <hr>
-      {# leave/edit review only if logged in #}
+
+      {# Leave/edit review only if logged in #}
       {% if current_user.is_authenticated %}
         {% if not user_rev %}
           <h4>Leave your review</h4>
-          <form method="POST" action="{{ url_for('product.add_review', product_id=product.id) }}">
+          <form method="POST"
+                action="{{ url_for('product.add_review', product_id=product.id) }}">
             <div class="mb-3">
               <label class="form-label">Rating</label>
-              <select name="rating" class="form-select" required>
-                {% for i in range(1,6) %}
-                  <option value="{{ i }}">{{ '★'*i }}{{ '☆'*(5-i) }} ({{ i }})</option>
+              <select name="rating"
+                      class="form-select"
+                      required>
+                {% for i in range(1, 6) %}
+                  <option value="{{ i }}">
+                    {{ '★' * i }}{{ '☆' * (5 - i) }} ({{ i }})
+                  </option>
                 {% endfor %}
               </select>
             </div>
             <div class="mb-3">
               <label class="form-label">Review</label>
-              <textarea name="review_text" class="form-control" rows="3"></textarea>
+              <textarea name="review_text"
+                        class="form-control"
+                        rows="3"></textarea>
             </div>
             <button class="btn btn-primary">Submit</button>
           </form>
@@ -44,33 +53,60 @@
           <div class="card mb-3">
             <div class="card-body">
               <div class="d-flex justify-content-between">
-                <div>
-                  <span class="text-warning">{{ '★'*user_rev.rating }}{{ '☆'*(5-user_rev.rating) }}</span>
-                </div>
-                <small class="text-muted">{{ user_rev.created_at.strftime('%-m/%-d/%Y') }}</small>
+                <span class="text-warning">
+                  {{ '★' * user_rev.rating }}{{ '☆' * (5 - user_rev.rating) }}
+                </span>
+                <small class="text-muted">
+                  {{ user_rev.created_at.strftime('%-m/%-d/%Y') }}
+                </small>
               </div>
               <p class="mt-2">{{ user_rev.review_text }}</p>
-              <a href="{{ url_for('review.edit_product_review', review_id=user_rev.review_id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-              <form method="POST" action="{{ url_for('review.delete_product_review', review_id=user_rev.review_id) }}" style="display:inline-block">
-                <button class="btn btn-sm btn-outline-danger">Delete</button>
-              </form>
+              <div>
+                <a href="{{ url_for('review.edit_product_review', review_id=user_rev.review_id) }}"
+                   class="btn btn-sm btn-outline-primary">Edit</a>
+                <form method="POST"
+                      action="{{ url_for('review.delete_product_review', review_id=user_rev.review_id) }}"
+                      style="display: inline-block;">
+                  <button class="btn btn-sm btn-outline-danger">Delete</button>
+                </form>
+              </div>
             </div>
           </div>
-          <hr>
         {% endif %}
+      {% else %}
       {% endif %}
 
+      <hr>
       <h4>All reviews</h4>
       {% for r in reviews %}
         <div class="card mb-2">
           <div class="card-body">
-            <div class="d-flex justify-content-between">
+            <div class="d-flex justify-content-between align-items-center">
               <div>
                 <strong>{{ r.reviewer_name }}</strong>
-                <span class="text-warning">{{ '★'*r.rating }}{{ '☆'*(5-r.rating) }}</span>
+                <span class="text-warning">
+                  {{ '★' * r.rating }}{{ '☆' * (5 - r.rating) }}
+                </span>
               </div>
-              <small class="text-muted">{{ r.created_at.strftime('%-m/%-d/%Y') }}</small>
+              <div>
+                <span class="me-2">{{ r.upvotes_count }} 👍</span>
+                {% if current_user.is_authenticated %}
+                  <form method="POST"
+                        action="{{ url_for('product.upvote_review', review_id=r.review_id) }}"
+                        style="display: inline-block;">
+                    <button class="btn btn-sm btn-outline-success">Helpful</button>
+                  </form>
+                  <form method="POST"
+                        action="{{ url_for('product.remove_upvote_review', review_id=r.review_id) }}"
+                        style="display: inline-block;">
+                    <button class="btn btn-sm btn-outline-secondary">Undo</button>
+                  </form>
+                {% endif %}
+              </div>
             </div>
+            <small class="text-muted">
+              {{ r.created_at.strftime('%-m/%-d/%Y') }}
+            </small>
             <p class="mt-2">{{ r.review_text }}</p>
           </div>
         </div>

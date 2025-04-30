@@ -126,32 +126,38 @@ def detail(product_id):
     if not product:
         abort(404)
 
+    # Fetch all reviews (each has .upvotes_count)
     reviews = ProductReview.get_by_product(product_id)
-    count = len(reviews)
-    avg = round(sum(r.rating for r in reviews) / count, 2) if count else None
+    count   = len(reviews)
+    avg     = round(sum(r.rating for r in reviews) / count, 2) if count else None
 
+    # If the user is logged in, fetch their own review for edit/delete UI
     if current_user.is_authenticated:
         user_rev = ProductReview.get_by_user_and_product(
             current_user.id, product_id
         )
     else:
         user_rev = None
+    helpful_reviews = [r for r in reviews if r.upvotes_count > 0]
+    top3 = sorted(
+        helpful_reviews,
+        key=lambda r: r.upvotes_count,
+        reverse=True
+    )[:3]
+    rest = [r for r in reviews if r not in top3]
+    rest.sort(key=lambda r: r.created_at, reverse=True)
 
-    sort = request.args.get('sort', 'date')
-    if sort == 'rating':
-        reviews.sort(key=lambda r: r.rating, reverse=True)
-    else:
-        reviews.sort(key=lambda r: r.created_at, reverse=True)
+    ordered_reviews = top3 + rest
 
     return render_template(
         'product_detail.html',
         product=product,
-        reviews=reviews,
+        reviews=ordered_reviews,
         avg=avg,
         count=count,
-        user_rev=user_rev,
-        sort=sort
+        user_rev=user_rev
     )
+
 
 
 @bp.route('/product/<int:product_id>/review', methods=['POST'])
@@ -167,3 +173,18 @@ def add_review(product_id):
         flash('Review submitted!', 'success')
 
     return redirect(url_for('product.detail', product_id=product_id))
+
+@bp.route('/review/<int:review_id>/upvote', methods=['POST'])
+@login_required
+def upvote_review(review_id):
+    ProductReview.upvote(review_id, current_user.id)
+    flash('Marked as helpful 👍', 'success')
+    # redirect back to the product detail
+    return redirect(request.referrer or url_for('product.product_all'))
+
+@bp.route('/review/<int:review_id>/remove_upvote', methods=['POST'])
+@login_required
+def remove_upvote_review(review_id):
+    ProductReview.remove_upvote(review_id, current_user.id)
+    flash('Removed your vote', 'info')
+    return redirect(request.referrer or url_for('product.product_all'))
