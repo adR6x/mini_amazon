@@ -66,6 +66,23 @@
         </form>
         <a href="{{ url_for('inventory.inventory_page') }}" class="btn btn-outline-primary ms-2">Back to Inventory</a>
       </div>
+
+      <div class="mt-4">
+        <h4>Average Rating: {{ '%.2f' | format(average_rating) if average_rating else 'No ratings yet' }}</h4>
+        <h5>Reviews:</h5>
+        {% if reviews %}
+        <ul class="list-group">
+          {% for review in reviews %}
+          <li class="list-group-item">
+            <strong>Reviewer ID: {{ review.reviewer_id }}</strong> rated it {{ review.rating }} stars
+            <p>{{ review.review_text }}</p>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p>No reviews available for this product.</p>
+        {% endif %}
+      </div>
     </div>
   </div>
 </div>

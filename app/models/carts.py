@@ -1,5 +1,7 @@
 from flask import current_app as app
+from flask import session
 from sqlalchemy import text
+from decimal import Decimal
 
 
 class Cart:
@@ -69,19 +71,25 @@ class Cart:
             return None
 
     @staticmethod
-    def get_cart_items(user_id):
+    def get_cart_items(user_id, status='in_cart'):
+        """Get cart items with optional status filter."""
         try:
-            print(f"Getting cart items for user: {user_id}")
+            print(f"Getting cart items for user: {user_id} with status: {status}")
             query = '''
                 SELECT ci.cart_item_id, ci.product_id, p.name AS product_name, 
-                       ci.quantity, ci.unit_price, ci.added_at
+                       ci.quantity, ci.unit_price, ci.added_at, ci.status, ci.saved_at,
+                       COALESCE(i.quantity_available, 0) as quantity_available
                 FROM Cart_Items ci
                 JOIN Carts c ON ci.cart_id = c.cart_id
                 JOIN Products p ON ci.product_id = p.product_id
+                LEFT JOIN Inventory i ON ci.product_id = i.product_id AND ci.seller_id = i.seller_id
                 WHERE c.user_id = :user_id
+                AND ci.status = :status
+                ORDER BY 
+                    CASE WHEN :status = 'saved_for_later' THEN ci.saved_at ELSE ci.added_at END DESC
             '''
             print(f"Executing get_cart_items query: {query}")
-            rows = app.db.execute(query, user_id=user_id)
+            rows = app.db.execute(query, user_id=user_id, status=status)
             print(f"Found {len(rows) if rows else 0} items")
             return rows
         except Exception as e:
@@ -122,19 +130,12 @@ class Cart:
     @staticmethod
     def checkout(user_id):
         try:
-            print(f"Starting Cart.checkout for user_id: {user_id}")
-            
-            # First, check if the user has a cart
-            cart = app.db.execute('''
-                SELECT cart_id 
-                FROM Carts 
-                WHERE user_id = :user_id
-            ''', user_id=user_id)
-            print(f"Found cart: {cart}")
-            
+            print("Starting Cart.checkout for user_id:", user_id)
+            cart = Cart.get_cart_by_user(user_id)
             if not cart:
-                print("No cart found for user")
-                return {'success': False, 'message': 'No cart found. Please add items to your cart first.'}
+                print("No cart found")
+                return {'success': False, 'message': 'Cart not found.'}
+            print("Found cart:", cart)
             
             with app.db.engine.begin() as conn:
                 # Get cart items with product and inventory info
@@ -147,18 +148,28 @@ class Cart:
                         ci.quantity,
                         ci.unit_price,
                         ci.seller_id,
-                        i.quantity_available
+                        i.quantity_available,
+                        i.seller_id as inventory_seller_id
                     FROM Cart_Items ci
                     JOIN Carts c ON ci.cart_id = c.cart_id
                     JOIN Products p ON ci.product_id = p.product_id
-                    JOIN Inventory i ON ci.product_id = i.product_id AND ci.seller_id = i.seller_id
+                    JOIN Inventory i ON ci.product_id = i.product_id 
                     WHERE c.user_id = :user_id
+                    AND ci.status = 'in_cart'
+                    AND ci.seller_id = i.seller_id
                 '''), {'user_id': user_id}).fetchall()
-                print(f"Found {len(cart_items) if cart_items else 0} items with inventory")
+                
+                print("Detailed cart items:")
+                for item in cart_items:
+                    print(f"Item: {item.product_name}")
+                    print(f"  - Quantity requested: {item.quantity}")
+                    print(f"  - Quantity available: {item.quantity_available}")
+                    print(f"  - Seller ID in cart: {item.seller_id}")
+                    print(f"  - Seller ID in inventory: {item.inventory_seller_id}")
 
                 if not cart_items:
-                    print("Cart is empty or no inventory found")
-                    return {'success': False, 'message': 'Your cart is empty or the items are no longer available.'}
+                    print("Cart is empty")
+                    return {'success': False, 'message': 'Your cart is empty.'}
 
                 # Get buyer's balance
                 buyer = conn.execute(text('''
@@ -177,14 +188,33 @@ class Cart:
                 
                 print(f"Buyer balance: ${buyer.balance}")
 
-                # Calculate total amount
+                # Calculate total amount before discounts
                 total_amount = sum(item.quantity * item.unit_price for item in cart_items)
-                print(f"Total amount: ${total_amount}")
+                print(f"Total amount before discounts: ${total_amount}")
 
-                # Check buyer's balance
-                if buyer.balance < total_amount:
-                    print(f"Insufficient balance: ${buyer.balance} < ${total_amount}")
-                    return {'success': False, 'message': f'Insufficient balance. You need ${total_amount - buyer.balance:.2f} more to complete this purchase.'}
+                # Calculate total discount from applied coupons
+                total_discount = Decimal('0.00')
+                if 'applied_coupons' in session:
+                    print("Found applied coupons:", session['applied_coupons'])
+                    for coupon in session['applied_coupons']:
+                        print(f"Processing coupon: {coupon}")
+                        # Get items from this seller
+                        seller_items = [item for item in cart_items if item.seller_id == coupon['seller_id']]
+                        print(f"Found {len(seller_items)} items from seller {coupon['seller_id']}")
+                        if seller_items:
+                            seller_subtotal = sum(item.quantity * item.unit_price for item in seller_items)
+                            discount_amount = min(seller_subtotal, Decimal(str(coupon['discount_amount'])))
+                            total_discount += discount_amount
+                            print(f"Applied discount of ${discount_amount} for seller {coupon['seller_id']}")
+
+                # Calculate final total after discounts
+                final_total = total_amount - total_discount
+                print(f"Total after discounts: ${final_total} (Original: ${total_amount}, Discount: ${total_discount})")
+
+                # Check buyer's balance against final total
+                if buyer.balance < final_total:
+                    print(f"Insufficient balance: ${buyer.balance} < ${final_total}")
+                    return {'success': False, 'message': f'Insufficient balance. You need ${final_total - buyer.balance:.2f} more to complete this purchase.'}
 
                 # Check inventory for all items
                 for item in cart_items:
@@ -195,21 +225,22 @@ class Cart:
                 # Create order with initial status 'pending'
                 print("Creating order...")
                 order_id = conn.execute(text('''
-                    INSERT INTO Orders (order_id, buyer_id, total_amount, fulfillment_status)
-                    VALUES (DEFAULT, :buyer_id, :total_amount, 'pending')
+                    INSERT INTO Orders (buyer_id, total_amount, fulfillment_status)
+                    VALUES (:buyer_id, :total_amount, 'pending')
                     RETURNING order_id
                 '''), {
                     'buyer_id': user_id,
-                    'total_amount': total_amount
+                    'total_amount': final_total  # Use final_total instead of total_amount
                 }).fetchone()[0]
                 print(f"Created order {order_id}")
 
                 # Create order items and update inventory
                 for item in cart_items:
+                    print(f"Processing item: {item.product_name}")
                     # Create order item with initial status 'pending'
                     conn.execute(text('''
-                        INSERT INTO Order_Items (order_item_id, order_id, product_id, seller_id, quantity, unit_price, fulfillment_status)
-                        VALUES (DEFAULT, :order_id, :product_id, :seller_id, :quantity, :unit_price, 'pending')
+                        INSERT INTO Order_Items (order_id, product_id, seller_id, quantity, unit_price, fulfillment_status)
+                        VALUES (:order_id, :product_id, :seller_id, :quantity, :unit_price, 'pending')
                     '''), {
                         'order_id': order_id,
                         'product_id': item.product_id,
@@ -240,21 +271,27 @@ class Cart:
                         'seller_id': item.seller_id
                     })
 
-                # Update buyer's balance
+                # Update buyer's balance with the discounted total
                 conn.execute(text('''
                     UPDATE Users
                     SET balance = balance - :amount
                     WHERE id = :user_id
                 '''), {
-                    'amount': total_amount,
+                    'amount': final_total,
                     'user_id': user_id
                 })
 
-                # Clear cart
+                # Clear cart and applied coupons
                 conn.execute(text('''
                     DELETE FROM Cart_Items
                     WHERE cart_id IN (SELECT cart_id FROM Carts WHERE user_id = :user_id)
+                    AND status = 'in_cart'
                 '''), {'user_id': user_id})
+                
+                # Clear applied coupons from session
+                if 'applied_coupons' in session:
+                    session.pop('applied_coupons')
+                    session.modified = True
 
                 print("Checkout completed successfully")
                 return {'success': True, 'message': 'Order placed successfully!', 'order_id': order_id}
@@ -395,3 +432,33 @@ class Cart:
         except Exception as e:
             print(f"Error getting user address: {str(e)}")
             return None
+
+    @staticmethod
+    def move_to_saved_for_later(cart_item_id):
+        """Move an item from cart to saved for later."""
+        try:
+            app.db.execute('''
+                UPDATE Cart_Items
+                SET status = 'saved_for_later',
+                    saved_at = CURRENT_TIMESTAMP
+                WHERE cart_item_id = :cart_item_id
+            ''', cart_item_id=cart_item_id)
+            return True
+        except Exception as e:
+            print(f"Error moving to saved for later: {str(e)}")
+            return False
+
+    @staticmethod
+    def move_to_cart(cart_item_id):
+        """Move an item from saved for later back to cart."""
+        try:
+            app.db.execute('''
+                UPDATE Cart_Items
+                SET status = 'in_cart',
+                    saved_at = NULL
+                WHERE cart_item_id = :cart_item_id
+            ''', cart_item_id=cart_item_id)
+            return True
+        except Exception as e:
+            print(f"Error moving to cart: {str(e)}")
+            return False
