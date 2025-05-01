@@ -173,3 +173,30 @@ background: #f0f0f0;
     align-items: center;
     gap: 10px;
 }
+
+.cart-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: flex-start;
+}
+
+.cart-actions input {
+    width: 40px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.add-to-cart {
+    background: green;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.add-to-cart:hover {
+    background: #218838;
+}

@@ -30,6 +30,16 @@
 
       {% if current_user.is_authenticated %}
         {% if not user_rev %}
+          <div class="cart-actions">
+            <input type="number" value="1" min="1" class="quantity-input" />
+            <button
+              class="add-to-cart"
+              data-product-id="{{ product.id }}"
+              data-unit-price="{{ product.price }}"
+            >
+              Add to Cart
+            </button>
+          </div>
           <h4>Leave your review</h4>
           <form method="POST"
                 action="{{ url_for('product.add_review', product_id=product.id) }}">
@@ -253,6 +263,30 @@
     });
 
     displayPage(1);
+  });
+
+  // Add to cart
+  document.querySelectorAll(".add-to-cart").forEach(button => {
+    button.addEventListener("click", async e => {
+      e.preventDefault();
+      const pid = button.dataset.productId;
+      const price = button.dataset.unitPrice;
+      const qty = button.closest(".cart-actions").querySelector(".quantity-input").value || 1;
+      try {
+        const res = await fetch("/add_to_cart", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          body: new URLSearchParams({ product_id: pid, quantity: qty, unit_price: price })
+        });
+        const txt = res.ok ? (await res.json()).message : `Server error (${res.status})`;
+        alert(txt);
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    });
   });
 </script>
 
