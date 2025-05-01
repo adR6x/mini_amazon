@@ -78,7 +78,8 @@ class Cart:
             query = '''
                 SELECT ci.cart_item_id, ci.product_id, p.name AS product_name, 
                        ci.quantity, ci.unit_price, ci.added_at, ci.status, ci.saved_at,
-                       COALESCE(i.quantity_available, 0) as quantity_available
+                       COALESCE(i.quantity_available, 0) as quantity_available,
+                       p.image_url
                 FROM Cart_Items ci
                 JOIN Carts c ON ci.cart_id = c.cart_id
                 JOIN Products p ON ci.product_id = p.product_id
@@ -138,7 +139,7 @@ class Cart:
             print("Found cart:", cart)
             
             with app.db.engine.begin() as conn:
-                # Get cart items with product and inventory info
+                # Get ONLY in_cart items with product and inventory info
                 print("Fetching cart items with inventory info...")
                 cart_items = conn.execute(text('''
                     SELECT 
@@ -148,28 +149,27 @@ class Cart:
                         ci.quantity,
                         ci.unit_price,
                         ci.seller_id,
-                        i.quantity_available,
+                        COALESCE(i.quantity_available, 0) as quantity_available,
                         i.seller_id as inventory_seller_id
                     FROM Cart_Items ci
                     JOIN Carts c ON ci.cart_id = c.cart_id
                     JOIN Products p ON ci.product_id = p.product_id
-                    JOIN Inventory i ON ci.product_id = i.product_id 
+                    LEFT JOIN Inventory i ON ci.product_id = i.product_id AND ci.seller_id = i.seller_id
                     WHERE c.user_id = :user_id
                     AND ci.status = 'in_cart'
-                    AND ci.seller_id = i.seller_id
                 '''), {'user_id': user_id}).fetchall()
                 
-                print("Detailed cart items:")
-                for item in cart_items:
-                    print(f"Item: {item.product_name}")
-                    print(f"  - Quantity requested: {item.quantity}")
-                    print(f"  - Quantity available: {item.quantity_available}")
-                    print(f"  - Seller ID in cart: {item.seller_id}")
-                    print(f"  - Seller ID in inventory: {item.inventory_seller_id}")
-
                 if not cart_items:
                     print("Cart is empty")
                     return {'success': False, 'message': 'Your cart is empty.'}
+
+                # Check inventory for active cart items only
+                print("Checking inventory for cart items...")
+                for item in cart_items:
+                    print(f"Checking item {item.product_name}: requested {item.quantity}, available {item.quantity_available}, status: in_cart")
+                    if item.quantity_available < item.quantity:
+                        print(f"Insufficient inventory for {item.product_name}: requested {item.quantity}, available {item.quantity_available}")
+                        return {'success': False, 'message': f'Insufficient inventory for {item.product_name}. Only {item.quantity_available} available.'}
 
                 # Get buyer's balance
                 buyer = conn.execute(text('''
@@ -188,7 +188,7 @@ class Cart:
                 
                 print(f"Buyer balance: ${buyer.balance}")
 
-                # Calculate total amount before discounts
+                # Calculate total amount before discounts (only for in_cart items)
                 total_amount = sum(item.quantity * item.unit_price for item in cart_items)
                 print(f"Total amount before discounts: ${total_amount}")
 
@@ -198,7 +198,7 @@ class Cart:
                     print("Found applied coupons:", session['applied_coupons'])
                     for coupon in session['applied_coupons']:
                         print(f"Processing coupon: {coupon}")
-                        # Get items from this seller
+                        # Get items from this seller (only in_cart items)
                         seller_items = [item for item in cart_items if item.seller_id == coupon['seller_id']]
                         print(f"Found {len(seller_items)} items from seller {coupon['seller_id']}")
                         if seller_items:
@@ -215,12 +215,6 @@ class Cart:
                 if buyer.balance < final_total:
                     print(f"Insufficient balance: ${buyer.balance} < ${final_total}")
                     return {'success': False, 'message': f'Insufficient balance. You need ${final_total - buyer.balance:.2f} more to complete this purchase.'}
-
-                # Check inventory for all items
-                for item in cart_items:
-                    if item.quantity_available < item.quantity:
-                        print(f"Insufficient inventory for {item.product_name}: requested {item.quantity}, available {item.quantity_available}")
-                        return {'success': False, 'message': f'Insufficient inventory for {item.product_name}. Only {item.quantity_available} available.'}
 
                 # Create order with initial status 'pending'
                 print("Creating order...")
