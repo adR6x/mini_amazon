@@ -1,12 +1,13 @@
 from flask import current_app as app
 
 class Inventory:
-    def __init__(self, seller_id, product_id, product_name, quantity_available, price):
+    def __init__(self, seller_id, product_id, product_name, quantity_available, price, image_url):
         self.seller_id = seller_id
         self.product_id = product_id
         self.product_name = product_name
         self.quantity_available = quantity_available
         self.price = price
+        self.image_url = image_url
 
     # @staticmethod
     # def get_by_seller(seller_id):
@@ -137,17 +138,17 @@ class Inventory:
         ''')
         return [{'id': row[0], 'name': row[1]} for row in rows] if rows else []
 
-    @staticmethod
-    def get_inventory_items(seller_id, page, items_per_page):
-        offset = (page - 1) * items_per_page
-        rows = app.db.execute('''
-            SELECT i.seller_id, i.product_id, p.name, i.quantity_available, i.price
-            FROM Inventory i
-            JOIN Products p ON i.product_id = p.product_id
-            WHERE i.seller_id = :seller_id
-            LIMIT :items_per_page OFFSET :offset
-        ''', seller_id=seller_id, items_per_page=items_per_page, offset=offset)
-        return [Inventory(*row) for row in rows] if rows else []
+    # @staticmethod
+    # def get_inventory_items(seller_id, page, items_per_page):
+    #     offset = (page - 1) * items_per_page
+    #     rows = app.db.execute('''
+    #         SELECT i.seller_id, i.product_id, p.name, i.quantity_available, i.price, p.image_url
+    #         FROM Inventory i
+    #         JOIN Products p ON i.product_id = p.product_id
+    #         WHERE i.seller_id = :seller_id
+    #         LIMIT :items_per_page OFFSET :offset
+    #     ''', seller_id=seller_id, items_per_page=items_per_page, offset=offset)
+    #     return [Inventory(*row) for row in rows] if rows else []
 
 
     @staticmethod
@@ -195,38 +196,38 @@ class Inventory:
         ''', seller_id=seller_id, search_query=search_query)
         return result[0][0] if result else 0
 
-    @staticmethod
-    def filter_inventory(seller_id, search_query, category_id, min_price, max_price, page, items_per_page):
-        offset = (page - 1) * items_per_page
-        query = '''
-            SELECT i.seller_id, i.product_id, p.name, i.quantity_available, i.price
-            FROM Inventory i
-            JOIN Products p ON i.product_id = p.product_id
-            WHERE i.seller_id = :seller_id
-        '''
-        params = {'seller_id': seller_id}
+    # @staticmethod
+    # def filter_inventory(seller_id, search_query, category_id, min_price, max_price, page, items_per_page):
+    #     offset = (page - 1) * items_per_page
+    #     query = '''
+    #         SELECT i.seller_id, i.product_id, p.name, i.quantity_available, i.price
+    #         FROM Inventory i
+    #         JOIN Products p ON i.product_id = p.product_id
+    #         WHERE i.seller_id = :seller_id
+    #     '''
+    #     params = {'seller_id': seller_id}
 
-        if search_query:
-            query += " AND (p.description ILIKE '%' || :search_query || '%' OR p.name ILIKE '%' || :search_query || '%')"
-            params['search_query'] = search_query
-        if category_id:
-            query += " AND p.category_id = :category_id"
-            params['category_id'] = category_id
-        if min_price is not None:
-            query += " AND i.price >= :min_price"
-            params['min_price'] = min_price
-        if max_price is not None:
-            query += " AND i.price <= :max_price"
-            params['max_price'] = max_price
+    #     if search_query:
+    #         query += " AND (p.description ILIKE '%' || :search_query || '%' OR p.name ILIKE '%' || :search_query || '%')"
+    #         params['search_query'] = search_query
+    #     if category_id:
+    #         query += " AND p.category_id = :category_id"
+    #         params['category_id'] = category_id
+    #     if min_price is not None:
+    #         query += " AND i.price >= :min_price"
+    #         params['min_price'] = min_price
+    #     if max_price is not None:
+    #         query += " AND i.price <= :max_price"
+    #         params['max_price'] = max_price
 
-        total_query = 'SELECT COUNT(*) FROM (' + query + ') AS total'
-        total_items = app.db.execute(total_query, **params)[0][0]
+    #     total_query = 'SELECT COUNT(*) FROM (' + query + ') AS total'
+    #     total_items = app.db.execute(total_query, **params)[0][0]
 
-        query += " LIMIT :items_per_page OFFSET :offset"
-        params.update({'items_per_page': items_per_page, 'offset': offset})
-        rows = app.db.execute(query, **params)
+    #     query += " LIMIT :items_per_page OFFSET :offset"
+    #     params.update({'items_per_page': items_per_page, 'offset': offset})
+    #     rows = app.db.execute(query, **params)
 
-        return total_items, [Inventory(*row) for row in rows] if rows else []
+    #     return total_items, [Inventory(*row) for row in rows] if rows else []
 
     @staticmethod
     def get_product_reviews_and_rating(product_id):
@@ -252,7 +253,7 @@ class Inventory:
     def filter_and_sort_inventory(seller_id, search_query, category_id, min_price, max_price, sort_by, sort_order, page, items_per_page):
         offset = (page - 1) * items_per_page
         query = '''
-            SELECT i.seller_id, i.product_id, p.name, i.quantity_available, i.price
+            SELECT i.seller_id, i.product_id, p.name, i.quantity_available, i.price, p.image_url
             FROM Inventory i
             JOIN Products p ON i.product_id = p.product_id
             WHERE i.seller_id = :seller_id

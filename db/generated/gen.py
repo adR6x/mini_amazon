@@ -28,7 +28,7 @@ def get_bing_square_image(query):
 
 # Modified quantities
 TOKEN_USER_ID = 100  # test user ID
-num_users = 100
+num_users = 101
 num_products = 600
 num_purchases = 200
 NUM_PRODUCT_REVIEWS = 1200
