@@ -117,7 +117,6 @@ def by_category():
 
     unique_cat = Category.get_unique()
     products = Product.get_by_cat(category_id)
-    inventory = Product.get_inventory(product_id)
     page_heading = "🧭 Category: " + category_name
 
     filter_form = FilterForm(prefix="filter")
