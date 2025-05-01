@@ -207,6 +207,7 @@ ORDER BY time_purchased DESC
                 oi.quantity,
                 oi.unit_price,
                 oi.fulfillment_status,
+                oi.seller_id,  -- added seller_id
                 u.firstname || ' ' || u.lastname AS seller_name
             FROM Order_Items oi
             JOIN Products p ON oi.product_id = p.product_id
@@ -217,12 +218,13 @@ ORDER BY time_purchased DESC
 
         return [
             {
-                "order_item_id": row[0],
-                "product_name": row[1],
-                "quantity": row[2],
-                "unit_price": row[3],
+                "order_item_id":      row[0],
+                "product_name":       row[1],
+                "quantity":           row[2],
+                "unit_price":         row[3],
                 "fulfillment_status": row[4],
-                "seller_name": row[5]
+                "seller_id":          row[5],  # new field
+                "seller_name":        row[6]
             }
             for row in rows
         ]
