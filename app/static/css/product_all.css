@@ -121,6 +121,7 @@ main {
     background: #f0f0f0;
 }
 
+
 .product-list h2 {
     display: block;
     margin-left: 0;
@@ -131,6 +132,7 @@ main {
 .product-list {
     min-height: calc(100vh - 200px); /* subtract header/footer height estimate */
 }
+
 
 .product {
     display: flex;
@@ -178,6 +180,7 @@ main {
     font-size: 1.2rem;
     font-weight: bold;
     color: green;
+    margin-bottom: 0;
 }
 
 .avg_rating, .total_rating {

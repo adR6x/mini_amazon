@@ -92,16 +92,17 @@
             <p class="product-description">{{ product.description }}</p>
             <p class="price">${{ product.price }}</p>
             <div class="rating">
+              <span class="average_rating">({{ product.average_rating|default(0)|round(1) }})</span>
               <span class="rating_stars">
                 {%- set rating = product.average_rating|default(0) -%}
                 {%- set full = rating|int -%}
                 {%- set half = 1 if (rating - full) >= 0.5 else 0 -%}
                 {%- set empty = 5 - full - half -%}
-                {% for _ in range(full) %}&#9733;{% endfor %}
-                {% if half %}&#189;{% endif %}
-                {% for _ in range(empty) %}&#9734;{% endfor %}
-              </span>
-              <span class="total_rating">({{ product.number_of_reviews|default(0) }})</span>
+                {%- for _ in range(full) -%}&#9733;{%- endfor -%}
+                {%- if half -%}&#x2BEA;{%- endif -%}
+                {%- for _ in range(empty) -%}&#9734;{%- endfor -%}
+              </span>              
+              <span class="total_rating">(by {{ product.number_of_reviews|default(0) }} users)</span>
             </div>
             <div class="cart-actions">
               <input type="number" value="1" min="1" class="quantity-input" />
