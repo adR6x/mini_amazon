@@ -82,9 +82,11 @@
           data-price="{{ product.price }}"
           data-rating="{{ product.average_rating }}"
         >
-          <a href="{{ url_for('product.detail', product_id=product.id) }}">
-            <img src="{{ product.image_url }}" alt="Product Image" />
-          </a>
+          <div class="product-image">
+            <a href="{{ url_for('product.detail', product_id=product.id) }}">
+              <img src="{{ product.image_url }}" alt="Product Image" />
+            </a>
+          </div>  
           <div class="product-info">
             <a href="{{ url_for('product.detail', product_id=product.id) }}">
               <p class="product-title">{{ product.name }}</p>
