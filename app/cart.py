@@ -21,7 +21,7 @@ def cart_page():
         # Calculate total amount for cart items
         total_amount = sum(item[3] * item[4] for item in cart_items) if cart_items else 0
 
-        # Add total_price to each cart item
+        # Add total_price and image_url to each cart item
         enhanced_cart_items = []
         for item in cart_items:
             item_dict = {
@@ -33,11 +33,12 @@ def cart_page():
                 'added_at': item[5],
                 'status': item[6],
                 'total_price': item[3] * item[4],
-                'quantity_available': item[8]
+                'quantity_available': item[8],
+                'image_url': item[9]  # Add image URL
             }
             enhanced_cart_items.append(item_dict)
 
-        # Add total_price to each saved item
+        # Add total_price and image_url to each saved item
         enhanced_saved_items = []
         for item in saved_items:
             item_dict = {
@@ -50,7 +51,8 @@ def cart_page():
                 'status': item[6],
                 'saved_at': item[7],
                 'total_price': item[3] * item[4],
-                'quantity_available': item[8]
+                'quantity_available': item[8],
+                'image_url': item[9]  # Add image URL
             }
             enhanced_saved_items.append(item_dict)
 
