@@ -7,7 +7,7 @@ from flask_wtf import FlaskForm
 from wtforms import SelectField, SubmitField, IntegerField, FloatField, StringField
 from wtforms.validators import Optional, NumberRange
 
-from .models.product import Product, Category
+from .models.product import Product, Category, Inventory
 from .models.product_review import ProductReview
 
 bp = Blueprint('product', __name__)
@@ -117,6 +117,7 @@ def by_category():
 
     unique_cat = Category.get_unique()
     products = Product.get_by_cat(category_id)
+    inventory = Product.get_inventory(product_id)
     page_heading = "🧭 Category: " + category_name
 
     filter_form = FilterForm(prefix="filter")
@@ -142,8 +143,15 @@ def by_category():
 @bp.route('/product/<int:product_id>', methods=['GET'])
 def detail(product_id):
     product = Product.get(product_id)
+    inventory = Inventory.get_inventory_details(product_id)
     if not product:
-        abort(404)
+        abort(404)    
+
+    #Fetch inventory details
+    if not inventory:
+        flash("This product is not available for sale.", 'warning')
+        return redirect(url_for('product.product_all'))
+
 
     # Fetch all reviews (each has .upvotes_count)
     reviews = ProductReview.get_by_product(product_id)
@@ -174,7 +182,8 @@ def detail(product_id):
         reviews=ordered_reviews,
         avg=avg,
         count=count,
-        user_rev=user_rev
+        user_rev=user_rev,
+        inventory=inventory
     )
 
 
