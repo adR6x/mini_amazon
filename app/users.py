@@ -316,8 +316,13 @@ def orders():
     if per_page not in allowed_per_page:
         per_page = 10
     
-    # Fetch paginated orders for the logged-in seller
-    result = Purchase.get_seller_orders(current_user.id, page, per_page)
+    # Get sorting parameters
+    sort_by = request.args.get('sort_by', 'created_at', type=str)
+    sort_order = request.args.get('sort_order', 'desc', type=str)
+    
+    # Fetch paginated and sorted orders for the logged-in seller
+    # print(f"Debug: Sorting by {sort_by} in {sort_order} order")
+    result = Purchase.get_seller_orders(current_user.id, sort_by, sort_order,page, per_page)
     
     return render_template('orders.html',
                          orders=result['orders'],
@@ -325,7 +330,9 @@ def orders():
                          total_pages=result['total_pages'],
                          per_page=per_page,
                          total_count=result['total_count'],
-                         allowed_per_page=allowed_per_page)
+                         allowed_per_page=allowed_per_page,
+                         sort_by=sort_by,
+                         sort_order=sort_order)
 
 @bp.route('/purchases/<int:order_id>')
 @login_required
@@ -637,3 +644,12 @@ def deactivate_coupon(coupon_id):
     except Exception as e:
         flash(f'Error deactivating coupon: {str(e)}', 'danger')
         return redirect(url_for('users.manage_coupons'))
+
+
+@bp.route('/revenue_trends', methods=['GET'])
+@login_required
+def revenue_trends():
+    # Fetch the revenue data for the current user
+    data = Purchase.get_revenue_trends(current_user.id)
+    print(f"Debug: Revenue data: {data}")
+    return render_template('revenue_trends.html', revenue_data=data)

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Revenue Analytics</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div style="width: 80%; margin: auto; padding-top: 50px;">
+    <div style="text-align: left; margin-bottom: 20px;">
+      <a href="/orders" style="
+          padding: 10px 20px;
+          background-color: #007BFF;  /* Bootstrap blue */
+          color: white;
+          text-decoration: none;
+          border-radius: 5px;
+          font-weight: bold;
+          display: inline-block;
+      ">Back to Orders</a>
+    </div>
+
+    <h2 class="text-center">Revenue Over Time</h2>
+    <canvas id="revenueChart"></canvas>
+  </div>
+
+  <script>
+    const revenueData = {{ revenue_data | tojson }};
+    
+    const labels = revenueData.map(item => item.date);
+    const revenues = revenueData.map(item => parseFloat(item.total_revenue));
+
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    const revenueChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Total Revenue ($)',
+          data: revenues,
+          fill: false,
+          borderColor: 'blue',
+          backgroundColor: 'blue',
+          pointRadius: 5,
+          pointHoverRadius: 8,
+          pointBorderColor: 'white',
+          pointBackgroundColor: 'blue',
+          tension: 0.1
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Date'
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Revenue ($)'
+            },
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>

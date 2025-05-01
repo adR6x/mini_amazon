@@ -11,12 +11,27 @@
         <h2>My Orders</h2>
         <div class="d-flex align-items-center">
             <label for="per_page" class="me-2">Items per page:</label>
-            <select id="per_page" class="form-select form-select-sm" style="width: auto;" onchange="changeItemsPerPage(this.value)">
+            <select id="per_page" class="form-select form-select-sm me-2" style="width: auto;" onchange="changeItemsPerPage(this.value)">
                 {% for value in allowed_per_page %}
                 <option value="{{ value }}" {% if value|int == per_page|int %}selected{% endif %}>{{ value }}</option>
                 {% endfor %}
             </select>
+            <label for="sort_by" class="me-2">Sort by:</label>
+            <select id="sort_by" class="form-select form-select-sm me-2" style="width: auto;" onchange="changeSortBy(this.value)">
+                <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>Date</option>
+                <option value="total_amount" {% if sort_by == 'total_amount' %}selected{% endif %}>Total Amount</option>
+                <option value="item_count" {% if sort_by == 'item_count' %}selected{% endif %}>Number of Items</option>
+            </select>
+            <select id="sort_order" class="form-select form-select-sm" style="width: auto;" onchange="changeSortOrder(this.value)">
+                <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
+                <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
+            </select>
+            
         </div>
+        
+    </div>
+    <div class="d-flex justify-content-end mb-4">
+        <a href="/revenue_trends" class="btn btn-primary">View Revenue Trends</a>
     </div>
     
     {% if orders %}
@@ -100,6 +115,20 @@ function changeItemsPerPage(value) {
     url.searchParams.set('per_page', value);
     url.searchParams.set('page', 1);  // Reset to first page when changing items per page
     console.log('New URL:', url.toString());
+    window.location.href = url.toString();
+}
+
+function changeSortBy(value) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('sort_by', value);
+    url.searchParams.set('page', 1);  // Reset to first page when changing sort
+    window.location.href = url.toString();
+}
+
+function changeSortOrder(value) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('sort_order', value);
+    url.searchParams.set('page', 1);  // Reset to first page when changing sort order
     window.location.href = url.toString();
 }
 </script>
