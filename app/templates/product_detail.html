@@ -92,77 +92,79 @@
     </div>
   </div>
 <!-- Full-width review section -->
-<div class="row">
-  <div class="col-12">
-    <div class="all_review">
-      <h4>All reviews</h4>
-      <div class="filters">
-        <div class="sort-buttons">  
-          <button id="sort-date">Date ▲▼</button>
-          <button id="sort-rating">Rating ▲▼</button>
-          <button id="sort-helpfulness">Helpful ▲▼</button>
-        </div>
-        <div class="page-controls">  
-          <label for="products-per-page">Reviews per page:</label>
-          <select id="products-per-page">
-            <option value="2" selected>2</option>
-            <option value="5">5</option>
-            <option value="10">10</option>
-            <option value="15">15</option>
-          </select>
-        </div>
-      </div>
-      <div id="review-list">
-        {% for r in reviews %}
-        <div class="review-card" 
-          data-date="{{ r.created_at.strftime('%-m/%-d/%Y') }}" 
-          data-rating="{{ r.rating }}" 
-          data-helpfulness="{{ r.upvotes_count }}">
-          <div class="card mb-3"> <!-- Now inside .review-card -->
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-center">
-                <div>
-                  <strong>{{ r.reviewer_name }}</strong>
-                  <span class="text-warning">
-                    {{ '★' * r.rating }}{{ '☆' * (5 - r.rating) }}
-                  </span>
-                </div>
-                <div>
-                  <span class="me-2">{{ r.upvotes_count }} 👍</span>
-                  {% if current_user.is_authenticated %}
-                    <form method="POST"
-                          action="{{ url_for('product.upvote_review', review_id=r.review_id) }}"
-                          style="display: inline-block;">
-                      <button class="btn btn-sm btn-outline-success">Helpful</button>
-                    </form>
-                    <form method="POST"
-                          action="{{ url_for('product.remove_upvote_review', review_id=r.review_id) }}"
-                          style="display: inline-block;">
-                      <button class="btn btn-sm btn-outline-secondary">Undo</button>
-                    </form>
-                  {% endif %}
-                </div>
-              </div>
-              <small class="text-muted">
-                {{ r.created_at.strftime('%-m/%-d/%Y') }}
-              </small>
-              <p class="mt-2">{{ r.review_text }}</p>
-            </div>
+{% if count %} 
+  <div class="row">
+    <div class="col-12">
+      <div class="all_review">
+        <h4>All reviews</h4>
+        <div class="filters">
+          <div class="sort-buttons">  
+            <button id="sort-date">Date ▲▼</button>
+            <button id="sort-rating">Rating ▲▼</button>
+            <button id="sort-helpfulness">Helpful ▲▼</button>
+          </div>
+          <div class="page-controls">  
+            <label for="products-per-page">Reviews per page:</label>
+            <select id="products-per-page">
+              <option value="2" selected>2</option>
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="15">15</option>
+            </select>
           </div>
         </div>
-        {% endfor %}
+        <div id="review-list">
+          {% for r in reviews %}
+          <div class="review-card" 
+            data-date="{{ r.created_at.strftime('%-m/%-d/%Y') }}" 
+            data-rating="{{ r.rating }}" 
+            data-helpfulness="{{ r.upvotes_count }}">
+            <div class="card mb-3"> <!-- Now inside .review-card -->
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong>{{ r.reviewer_name }}</strong>
+                    <span class="text-warning">
+                      {{ '★' * r.rating }}{{ '☆' * (5 - r.rating) }}
+                    </span>
+                  </div>
+                  <div>
+                    <span class="me-2">{{ r.upvotes_count }} 👍</span>
+                    {% if current_user.is_authenticated %}
+                      <form method="POST"
+                            action="{{ url_for('product.upvote_review', review_id=r.review_id) }}"
+                            style="display: inline-block;">
+                        <button class="btn btn-sm btn-outline-success">Helpful</button>
+                      </form>
+                      <form method="POST"
+                            action="{{ url_for('product.remove_upvote_review', review_id=r.review_id) }}"
+                            style="display: inline-block;">
+                        <button class="btn btn-sm btn-outline-secondary">Undo</button>
+                      </form>
+                    {% endif %}
+                  </div>
+                </div>
+                <small class="text-muted">
+                  {{ r.created_at.strftime('%-m/%-d/%Y') }}
+                </small>
+                <p class="mt-2">{{ r.review_text }}</p>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
       </div>
     </div>
   </div>
-</div>
 
-<div class="pagination-controls">
-  <button id="first-page" class="pagination-btn">First</button>
-  <button id="prev-page" class="pagination-btn">Prev</button>
-  <span id="page-numbers"></span>
-  <button id="next-page" class="pagination-btn">Next</button>
-  <button id="last-page" class="pagination-btn">Last</button>
-</div>
+  <div class="pagination-controls">
+    <button id="first-page" class="pagination-btn">First</button>
+    <button id="prev-page" class="pagination-btn">Prev</button>
+    <span id="page-numbers"></span>
+    <button id="next-page" class="pagination-btn">Next</button>
+    <button id="last-page" class="pagination-btn">Last</button>
+  </div>
+{% endif %}
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
