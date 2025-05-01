@@ -1,28 +1,75 @@
 {% extends "base.html" %}
 {% block content %}
+
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/product_detail.css') }}"
+/>
 <div class="container py-4">
-  <div class="row">
-    <div class="col-md-5">
+  <!-- Product image and details -->
+  <div class="row mb-4">
+    <div class="col-md-5 d-flex flex-column align-items-center">
       <img src="{{ product.image_url or url_for('static', filename='images/placeholder.png') }}"
            class="img-fluid rounded"
            alt="{{ product.name }}">
-    </div>
+      
+      <div class="inventory-details mt-4">
+        <h3>Seller Information</h3>
+        <ul style="text-align: center; list-style: none; padding: 0;">
+          <li><strong>🧑‍🦲 </strong>{{ inventory.seller_fname }} {{ inventory.seller_lname }}</li>
+          <li><strong>Rating:</strong> {{ inventory.seller_rating | round(2) }}
+            <span class="rating_stars">
+              {%- set rating = inventory.seller_rating|default(0) -%}
+              {%- set full = rating|int -%}
+              {%- set half = 1 if (rating - full) >= 0.5 else 0 -%}
+              {%- set empty = 5 - full - half -%}
+              {%- for _ in range(full) -%}&#9733;{%- endfor -%}
+              {%- if half -%}&#x2BEA;{%- endif -%}
+              {%- for _ in range(empty) -%}&#9734;{%- endfor -%}
+            </span>
+          </li>
+          <li><strong>📦 Available Quantity:</strong> {{ inventory.inventory_amount }}</li>
+        </ul>
+      </div>
+    </div>    
     <div class="col-md-7">
-      <h1>{{ product.name }}</h1>
-      <p class="text-muted">${{ product.price }}</p>
-      <p>{{ product.description }}</p>
+      <div class="product-info">
+        <a href="{{ url_for('product.detail', product_id=product.id) }}">
+          <p class="product-title">{{ product.name }}</p>
+        </a>
+        <p class="product-description">{{ product.description }}</p>
+        <p class="price">${{ product.price }}</p>
+        <p></p>
+        <div class="cart-actions">
+          <input type="number" value="1" min="1" class="quantity-input" />
+          <button
+            class="add-to-cart"
+            data-product-id="{{ product.id }}"
+            data-unit-price="{{ product.price }}"
+          >
+          🏷️ Add to Cart
+          </button>
+        </div>
+      </div>  
 
-      <hr>
-      <h4>Rating summary</h4>
+
+      <h4>Product Rating summary</h4>
       {% if count %}
-        <p>{{ avg }} ★ average from {{ count }} review{{ 's' if count > 1 }}</p>
+        <p><span class="rating_stars">
+          {%- set rating = product.average_rating|default(0) -%}
+          {%- set full = rating|int -%}
+          {%- set half = 1 if (rating - full) >= 0.5 else 0 -%}
+          {%- set empty = 5 - full - half -%}
+          {%- for _ in range(full) -%}&#9733;{%- endfor -%}
+          {%- if half -%}&#x2BEA;{%- endif -%}
+          {%- for _ in range(empty) -%}&#9734;{%- endfor -%}
+        </span> {{ avg }} average from {{ count }} review{{ 's' if count > 1 }}</p>
       {% else %}
         <p>No reviews yet.</p>
       {% endif %}
 
       <hr>
 
-      {# Leave/edit review only if logged in #}
       {% if current_user.is_authenticated %}
         {% if not user_rev %}
           <h4>Leave your review</h4>
@@ -73,45 +120,209 @@
             </div>
           </div>
         {% endif %}
-      {% else %}
       {% endif %}
-
-      <hr>
-      <h4>All reviews</h4>
-      {% for r in reviews %}
-        <div class="card mb-2">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-              <div>
-                <strong>{{ r.reviewer_name }}</strong>
-                <span class="text-warning">
-                  {{ '★' * r.rating }}{{ '☆' * (5 - r.rating) }}
-                </span>
-              </div>
-              <div>
-                <span class="me-2">{{ r.upvotes_count }} 👍</span>
-                {% if current_user.is_authenticated %}
-                  <form method="POST"
-                        action="{{ url_for('product.upvote_review', review_id=r.review_id) }}"
-                        style="display: inline-block;">
-                    <button class="btn btn-sm btn-outline-success">Helpful</button>
-                  </form>
-                  <form method="POST"
-                        action="{{ url_for('product.remove_upvote_review', review_id=r.review_id) }}"
-                        style="display: inline-block;">
-                    <button class="btn btn-sm btn-outline-secondary">Undo</button>
-                  </form>
-                {% endif %}
-              </div>
-            </div>
-            <small class="text-muted">
-              {{ r.created_at.strftime('%-m/%-d/%Y') }}
-            </small>
-            <p class="mt-2">{{ r.review_text }}</p>
-          </div>
-        </div>
-      {% endfor %}
     </div>
   </div>
-</div>
+<!-- Full-width review section -->
+{% if count %} 
+  <div class="row">
+    <div class="col-12">
+      <div class="all_review">
+        <h4>All reviews</h4>
+        <div class="filters">
+          <div class="sort-buttons">  
+            <button id="sort-date">Date ▲▼</button>
+            <button id="sort-rating">Rating ▲▼</button>
+            <button id="sort-helpfulness">Helpful ▲▼</button>
+          </div>
+          <div class="page-controls">  
+            <label for="products-per-page">Reviews per page:</label>
+            <select id="products-per-page">
+              <option value="2" selected>2</option>
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="15">15</option>
+            </select>
+          </div>
+        </div>
+        <div id="review-list">
+          {% for r in reviews %}
+          <div class="review-card" 
+            data-date="{{ r.created_at.strftime('%-m/%-d/%Y') }}" 
+            data-rating="{{ r.rating }}" 
+            data-helpfulness="{{ r.upvotes_count }}">
+            <div class="card mb-3"> <!-- Now inside .review-card -->
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong>{{ r.reviewer_name }}</strong>
+                    <span class="text-warning">
+                      {{ '★' * r.rating }}{{ '☆' * (5 - r.rating) }}
+                    </span>
+                  </div>
+                  <div>
+                    <span class="me-2">{{ r.upvotes_count }} 👍</span>
+                    {% if current_user.is_authenticated %}
+                      <form method="POST"
+                            action="{{ url_for('product.upvote_review', review_id=r.review_id) }}"
+                            style="display: inline-block;">
+                        <button class="btn btn-sm btn-outline-success">Helpful</button>
+                      </form>
+                      <form method="POST"
+                            action="{{ url_for('product.remove_upvote_review', review_id=r.review_id) }}"
+                            style="display: inline-block;">
+                        <button class="btn btn-sm btn-outline-secondary">Undo</button>
+                      </form>
+                    {% endif %}
+                  </div>
+                </div>
+                <small class="text-muted">
+                  {{ r.created_at.strftime('%-m/%-d/%Y') }}
+                </small>
+                <p class="mt-2">{{ r.review_text }}</p>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pagination-controls">
+    <button id="first-page" class="pagination-btn">First</button>
+    <button id="prev-page" class="pagination-btn">Prev</button>
+    <span id="page-numbers"></span>
+    <button id="next-page" class="pagination-btn">Next</button>
+    <button id="last-page" class="pagination-btn">Last</button>
+  </div>
+{% endif %}
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const reviewsPerPageSelect = document.getElementById("products-per-page");
+    const paginationBtns = {
+      first: document.getElementById("first-page"),
+      prev: document.getElementById("prev-page"),
+      next: document.getElementById("next-page"),
+      last: document.getElementById("last-page"),
+      numbers: document.getElementById("page-numbers")
+    };
+
+    let currentPage = 1;
+    let reviewsPerPage = parseInt(reviewsPerPageSelect.value);
+    let sortDirection = {
+      date: "desc",
+      rating: "desc",
+      helpfulness: "desc"
+    };
+
+    const sortButtons = {
+      date: document.getElementById("sort-date"),
+      rating: document.getElementById("sort-rating"),
+      helpfulness: document.getElementById("sort-helpfulness")
+    };
+
+    function displayPage(page) {
+      const reviewCards = Array.from(document.querySelectorAll(".review-card"));
+      const totalPages = Math.ceil(reviewCards.length / reviewsPerPage);
+      if (page < 1) page = 1;
+      if (page > totalPages) page = totalPages;
+      currentPage = page;
+
+      const start = (page - 1) * reviewsPerPage;
+      const end = start + reviewsPerPage;
+
+      reviewCards.forEach((card, index) => {
+        card.style.display = index >= start && index < end ? "block" : "none";
+      });
+
+      renderPageNumbers(totalPages);
+    }
+
+    function renderPageNumbers(totalPages) {
+      paginationBtns.numbers.innerHTML = "";
+      for (let i = 1; i <= totalPages; i++) {
+        const btn = document.createElement("button");
+        btn.className = "pagination-btn";
+        btn.textContent = i;
+        if (i === currentPage) btn.disabled = true;
+        btn.addEventListener("click", () => displayPage(i));
+        paginationBtns.numbers.appendChild(btn);
+      }
+    }
+
+    function sortReviews(type) {
+      const reviews = Array.from(document.querySelectorAll(".review-card"));
+      const dir = sortDirection[type] === "asc" ? 1 : -1;
+    
+      reviews.sort((a, b) => {
+        let aVal = a.dataset[type];
+        let bVal = b.dataset[type];
+    
+        if (type === "date") {
+          aVal = new Date(aVal);
+          bVal = new Date(bVal);
+        } else {
+          aVal = parseInt(aVal, 10);
+          bVal = parseInt(bVal, 10);
+        }
+    
+        return dir * (aVal > bVal ? 1 : aVal < bVal ? -1 : 0);
+      });
+    
+      const container = document.getElementById("review-list");
+      container.innerHTML = "";
+      reviews.forEach(card => container.appendChild(card));
+    
+      sortDirection[type] = sortDirection[type] === "asc" ? "desc" : "asc";
+      displayPage(currentPage);  // keep the current page after sorting
+    }
+
+    sortButtons.date.addEventListener("click", () => sortReviews("date"));
+    sortButtons.rating.addEventListener("click", () => sortReviews("rating"));
+    sortButtons.helpfulness.addEventListener("click", () => sortReviews("helpfulness"));
+
+    reviewsPerPageSelect.addEventListener("change", () => {
+      reviewsPerPage = parseInt(reviewsPerPageSelect.value);
+      displayPage(1);
+    });
+
+    paginationBtns.first.addEventListener("click", () => displayPage(1));
+    paginationBtns.prev.addEventListener("click", () => displayPage(currentPage - 1));
+    paginationBtns.next.addEventListener("click", () => displayPage(currentPage + 1));
+    paginationBtns.last.addEventListener("click", () => {
+      const totalPages = Math.ceil(document.querySelectorAll(".review-card").length / reviewsPerPage);
+      displayPage(totalPages);
+    });
+
+    displayPage(1);
+  });
+
+  // Add to cart
+  document.querySelectorAll(".add-to-cart").forEach(button => {
+    button.addEventListener("click", async e => {
+      e.preventDefault();
+      const pid = button.dataset.productId;
+      const price = button.dataset.unitPrice;
+      const qty = button.closest(".cart-actions").querySelector(".quantity-input").value || 1;
+      try {
+        const res = await fetch("/add_to_cart", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          body: new URLSearchParams({ product_id: pid, quantity: qty, unit_price: price })
+        });
+        const txt = res.ok ? (await res.json()).message : `Server error (${res.status})`;
+        alert(txt);
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    });
+  });
+</script>
+
+  
 {% endblock %}

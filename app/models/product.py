@@ -91,66 +91,59 @@ GROUP BY
   p.description, p.image_url,
   p.seller_id, p.category_id
 ORDER BY RANDOM()
-LIMIT 5
 ''')
         return [Product(*row) for row in rows]
 
     @staticmethod
-    def get_filtered_top_exp(most_exp):
-        rows = app.db.execute('''
-SELECT
-  p.product_id   AS id,
-  p.name,
-  p.price,
-  p.description,
-  p.image_url,
-  p.seller_id,
-  p.category_id,
-  COUNT(pr.review_id)      AS number_of_reviews,
-  COALESCE(AVG(pr.rating), 0) AS average_rating
-FROM Products p
-LEFT JOIN Product_Reviews pr
-  ON pr.product_id = p.product_id
-GROUP BY
-  p.product_id, p.name, p.price,
-  p.description, p.image_url,
-  p.seller_id, p.category_id
-ORDER BY p.price DESC
-LIMIT :most_exp
-''', most_exp=most_exp)
+    def get_filtered_all(review=None, min_price=None, max_price=None, most_exp=None, category_id=None):
+        base_query = '''
+        SELECT
+          p.product_id   AS id,
+          p.name,
+          p.price,
+          p.description,
+          p.image_url,
+          p.seller_id,
+          p.category_id,
+          COUNT(pr.review_id)      AS number_of_reviews,
+          COALESCE(AVG(pr.rating), 0) AS average_rating
+        FROM Products p
+        LEFT JOIN Product_Reviews pr
+          ON pr.product_id = p.product_id
+        WHERE 1=1
+        '''
+        params = {}
+        
+        if min_price is not None:
+            base_query += " AND p.price >= :min_price"
+            params['min_price'] = min_price
+        if max_price is not None:
+            base_query += " AND p.price <= :max_price"
+            params['max_price'] = max_price
+        if category_id:
+            base_query += " AND p.category_id = :category_id"
+            params['category_id'] = category_id
+
+        base_query += '''
+        GROUP BY
+          p.product_id, p.name, p.price,
+          p.description, p.image_url,
+          p.seller_id, p.category_id
+        '''
+
+        if review:
+            base_query += " HAVING AVG(pr.rating) >= :review"
+            params['review'] = review
+
+        base_query += " ORDER BY p.price DESC"
+
+        if most_exp:
+            base_query += " LIMIT :most_exp"
+            params['most_exp'] = most_exp
+
+        rows = app.db.execute(base_query, **params)
         return [Product(*row) for row in rows]
 
-    @staticmethod
-    def get_filtered_all(review, min_price, max_price, most_exp):
-        rows = app.db.execute('''
-SELECT
-  p.product_id   AS id,
-  p.name,
-  p.price,
-  p.description,
-  p.image_url,
-  p.seller_id,
-  p.category_id,
-  COUNT(pr.review_id)      AS number_of_reviews,
-  COALESCE(AVG(pr.rating), 0) AS average_rating
-FROM Products p
-LEFT JOIN Product_Reviews pr
-  ON pr.product_id = p.product_id
-WHERE p.price BETWEEN :min_price AND :max_price
-GROUP BY
-  p.product_id, p.name, p.price,
-  p.description, p.image_url,
-  p.seller_id, p.category_id
-HAVING AVG(pr.rating) >= :review
-ORDER BY p.price DESC
-LIMIT :most_exp
-''',
-            review=review,
-            min_price=min_price,
-            max_price=max_price,
-            most_exp=most_exp
-        )
-        return [Product(*row) for row in rows]
 
     @staticmethod
     def get_by_cat(category_id):
@@ -173,7 +166,6 @@ GROUP BY
   p.product_id, p.name, p.price,
   p.description, p.image_url,
   p.seller_id, p.category_id
-LIMIT 5
 ''', category_id=category_id)
         return [Product(*row) for row in rows]
 
@@ -223,7 +215,7 @@ LIMIT 5
             c.name        % :query OR
             c.description % :query
           ORDER BY rank DESC
-          LIMIT 5;
+          lIMIT 20  
           ''',
           query=str(query)
       )
@@ -260,3 +252,54 @@ FROM categories
 ORDER BY name ASC
 ''')
         return [Category(*row) for row in rows]
+
+
+class Inventory:
+    def __init__(self, id, seller_id, seller_fname, seller_lname, category_name, seller_rating, inventory_amount):
+        self.id = id
+        self.seller_id = seller_id
+        self.seller_fname = seller_fname
+        self.seller_lname = seller_lname
+        self.category_name = category_name
+        self.seller_rating = seller_rating
+        self.inventory_amount = inventory_amount
+
+    @staticmethod
+    def get_inventory_details(id):
+        row = app.db.execute('''
+        SELECT 
+            p.product_id, 
+            p.seller_id, 
+            u.firstname, 
+            u.lastname, 
+            c.name AS category_name, 
+            AVG(sr.rating) AS avg_rating, 
+            i.quantity_available
+        FROM products p
+        JOIN users u ON p.seller_id = u.id
+        JOIN categories c ON p.category_id = c.category_id
+        JOIN seller_reviews sr ON p.seller_id = sr.seller_id
+        JOIN inventory i ON p.product_id = i.product_id AND p.seller_id = i.seller_id
+        WHERE p.product_id = :id
+        GROUP BY 
+            p.product_id, 
+            p.seller_id, 
+            u.firstname, 
+            u.lastname, 
+            c.name, 
+            i.quantity_available
+        ''', id=id)
+
+        if not row:
+            return None
+
+        row = row[0]
+        return Inventory(
+            id=row[0],
+            seller_id=row[1],
+            seller_fname=row[2],
+            seller_lname=row[3],
+            category_name=row[4],
+            seller_rating=row[5],
+            inventory_amount=row[6]
+        )

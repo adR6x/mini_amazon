@@ -7,11 +7,9 @@ body {
 
 .container {
     display: flex;
-    /* padding: 20px; */
     max-width: 1200px;
     margin: 20px auto;
     background: white;
-    /* box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); */
     border-radius: 0px;
 }
 
@@ -34,7 +32,7 @@ body {
 .sidebar-list {
     list-style: none;
     padding: 0;
-    font-size: 15px; /* Slightly smaller for compactness */
+    font-size: 15px;
 }
 
 .sidebar-list li {
@@ -108,7 +106,7 @@ main {
     display: flex;
     gap: 10px;
     margin-bottom: 20px;
-    justify-content: flex-end;
+    justify-content: space-between;
     align-items: center;
 }
 
@@ -122,19 +120,23 @@ main {
 }
 
 .product-list h2 {
-    display: block;
     margin-left: 0;
     margin-bottom: 15px;
     color: black;
 }
 
 .product-list {
-    min-height: calc(100vh - 200px); /* subtract header/footer height estimate */
+    min-height: calc(100vh - 200px);
 }
 
-
+.product-container {
+    display: flex; /* Use flexbox to arrange items in a row */
+    align-items: center; /* Vertically center the items */
+    gap: 16px; /* Space between the image and product info */
+}
 .product {
     display: flex;
+    flex-direction: row; /* Ensures the image and info are in the same row */
     gap: 15px;
     background: white;
     padding: 10px;
@@ -143,16 +145,25 @@ main {
     border-radius: 5px;
 }
 
-.product img {
-    width: 80px;
-    height: 80px;
+.product-image {
+    width: 100px; /* Fixed width for the image column */
+    height: 100px;
+}
+
+.product-image img {
+    width: 100%;
+    height: 100%;
     object-fit: cover;
     border-radius: 5px;
 }
 
 .product-info {
-    flex-grow: 1;
-    text-align: left;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex: 1; /* Takes remaining space */
+    text-align: left; /* Left-align the text */
+    padding-left: 10px; /* Add some space from the image */
 }
 
 .product-title {
@@ -179,33 +190,32 @@ main {
     font-size: 1.2rem;
     font-weight: bold;
     color: green;
+    margin-bottom: 0;
 }
 
-.avg_rating, .total_rating {
+.avg_rating,
+.total_rating {
     font-size: 0.9rem;
     color: #666;
 }
+
 .rating {
     display: flex;
     align-items: center;
-    gap: 6px;           /* space between stars and count */
-    margin: 8px 0;      /* vertical spacing if desired */
-  }
-  
-  .rating_stars,
-  .total_rating {
-    margin: 0;          /* reset default p/spans if any */
-  }  
+    gap: 6px;
+    margin: 8px 0 5px 16px;
+    color: orange;
+    font-size: 0.9em;
+}
+
+.rating_stars,
+.total_rating {
+    margin: 0;
+}
 
 .unit-price {
     color: gray;
     font-size: 0.9em;
-}
-
-.rating {
-    color: orange;
-    font-size: 0.9em;
-    margin: 5px 0;
 }
 
 .cart-actions {
@@ -263,4 +273,83 @@ main {
 
 .btn-primary:hover {
     background-color: #0056b3;
+}
+
+.sort-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.sort-buttons select {
+    padding: 8px 12px;
+    font-size: 1em;
+    height: 35px;
+    width: 160px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background-color: white;
+}
+
+.sort-buttons select:hover {
+    background-color: #f0f0f0;
+}
+
+.page-controls {
+    display: flex;
+    justify-content: left;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.page-controls label {
+    font-size: 1em;
+}
+
+.page-controls select {
+    padding: 8px 12px;
+    font-size: 0.8em;
+    height: 35px;
+    width: 60px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background-color: white;
+}
+
+.page-controls select:hover {
+    background-color: #f0f0f0;
+}
+
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.pagination-btn {
+    padding: 8px 16px;
+    font-size: 0.9em;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.pagination-btn:hover {
+    background-color: #ddd;
+}
+
+.pagination-btn:disabled {
+    background-color: #e0e0e0;
+    cursor: not-allowed;
+}
+
+#page-numbers {
+    font-size: 0.9em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }

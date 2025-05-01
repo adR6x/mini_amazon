@@ -33,7 +33,7 @@ class LoginForm(FlaskForm):
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('index.index'))
+        return redirect(url_for('product.product_all'))
     form = LoginForm()
     if form.validate_on_submit():
         user = User.get_by_auth(form.email.data, form.password.data)
@@ -43,7 +43,7 @@ def login():
         login_user(user)
         next_page = request.args.get('next')
         if not next_page or url_parse(next_page).netloc != '':
-            next_page = url_for('index.index')
+            next_page = url_for('product.product_all')
 
         return redirect(next_page)
     return render_template('login.html', title='Sign In', form=form)
@@ -67,7 +67,7 @@ class RegistrationForm(FlaskForm):
 @bp.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for('index.index'))
+        return redirect(url_for('product.product_all'))
     form = RegistrationForm()
     if form.validate_on_submit():
         try:
@@ -87,7 +87,7 @@ def register():
 @bp.route('/logout')
 def logout():
     logout_user()
-    return redirect(url_for('index.index'))
+    return redirect(url_for('product.product_all'))
 
 
 @bp.route('/purchases')
@@ -258,7 +258,7 @@ def account():
     except Exception as e:
         print(f"Debug: Error in account route: {str(e)}")
         flash("Error loading profile: " + str(e), "danger")
-        return redirect(url_for('index.index'))
+        return redirect(url_for('product.product_all'))
 
 @bp.route('/user/<int:user_id>')
 def public_profile(user_id):
@@ -389,7 +389,7 @@ def view_profile(user_id):
         if not user_result:
             print("Debug: User not found")
             flash('User not found', 'error')
-            return redirect(url_for('index.index'))
+            return redirect(url_for('product.product_all'))
 
         user_row = user_result[0]
         print(f"Debug: User found: {user_row}")
@@ -486,7 +486,7 @@ def view_profile(user_id):
     except Exception as e:
         print(f"Debug: Error occurred: {str(e)}")
         flash(f'Error viewing profile: {str(e)}', 'error')
-        return redirect(url_for('index.index'))
+        return redirect(url_for('product.product_all'))
 
 @bp.route('/coupons')
 @login_required
