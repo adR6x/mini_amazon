@@ -1,0 +1,90 @@
+/* product_detail.css */
+
+/* Container padding */
+.container {
+    max-width: 960px;
+    margin: auto;
+  }
+  
+  /* Product image */
+  img.img-fluid {
+    object-fit: cover;
+    max-height: 400px;
+    border-radius: 1rem;
+  }
+  
+  /* Product name and price */
+  h1 {
+    font-size: 2rem;
+    font-weight: 600;
+  }
+  
+  .text-muted {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+  }
+  
+  /* Rating summary */
+  h4 {
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-top: 2rem;
+  }
+  
+  /* Select and textarea styling */
+  .form-select,
+  .form-control {
+    border-radius: 0.5rem;
+    border: 1px solid #ced4da;
+  }
+  
+  /* Buttons */
+  button.btn-primary,
+  .btn-outline-primary,
+  .btn-outline-danger,
+  .btn-outline-success,
+  .btn-outline-secondary {
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+  }
+  
+  /* Star rating */
+  .text-warning {
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+  }
+  
+  /* Cards */
+  .card {
+    border: 1px solid #dee2e6;
+    border-radius: 1rem;
+  }
+  
+  .card-body {
+    padding: 1rem 1.25rem;
+  }
+  
+  /* Review meta (date, helpful count) */
+  small.text-muted {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.9rem;
+  }
+  
+  .me-2 {
+    margin-right: 0.5rem;
+  }
+  
+  /* Review text */
+  .card p {
+    margin-top: 0.75rem;
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+  
+  /* Align action buttons inline */
+  form[style*="inline-block"] {
+    margin-left: 0.25rem;
+  }
+  

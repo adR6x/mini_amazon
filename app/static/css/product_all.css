@@ -193,6 +193,7 @@ main {
     align-items: center;
     gap: 6px;           /* space between stars and count */
     margin: 8px 0;      /* vertical spacing if desired */
+    margin-left: 16px;
 }
 
 .rating_stars,
