@@ -81,14 +81,35 @@
       {% endif %}
     </div>
   </div>
-
   <!-- Full-width review section -->
   <div class="row">
     <div class="col-12">
-      <h4>All reviews</h4>
-      {% for r in reviews %}
-        <div class="card mb-3">
-          <div class="card-body">
+      <div class="all_review">
+        <h4>All reviews</h4>
+        <div class="filters">
+          <div class="sort-buttons">  
+            <button id="sort-date">Date ▲▼</button>
+            <button id="sort-rating">Rating ▲▼</button>
+            <button id="sort-helpfulness">Helpful ▲▼</button>
+          </div>
+          <div class="page-controls">  
+            <label for="products-per-page">Reviews per page:</label>
+            <select id="products-per-page">
+              <option value="2" selected>2</option>
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="15">15</option>
+            </select>
+          </div>
+        </div>
+        <div id="review-list">
+          {% for r in reviews %}
+          <div class="review-card" 
+            data-date="{{ r.created_at.strftime('%-m/%-d/%Y') }}" 
+            data-rating="{{ r.rating }}" 
+            data-helpfulness="{{ r.upvotes_count }}">
+       <div class="card mb-3"> <!-- Now inside .review-card -->
+         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center">
               <div>
                 <strong>{{ r.reviewer_name }}</strong>
@@ -121,5 +142,116 @@
       {% endfor %}
     </div>
   </div>
+  <div class="pagination-controls">
+    <button id="first-page" class="pagination-btn">First</button>
+    <button id="prev-page" class="pagination-btn">Prev</button>
+    <span id="page-numbers"></span>
+    <button id="next-page" class="pagination-btn">Next</button>
+    <button id="last-page" class="pagination-btn">Last</button>
+  </div> 
 </div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const reviewsPerPageSelect = document.getElementById("products-per-page");
+    const paginationBtns = {
+      first: document.getElementById("first-page"),
+      prev: document.getElementById("prev-page"),
+      next: document.getElementById("next-page"),
+      last: document.getElementById("last-page"),
+      numbers: document.getElementById("page-numbers")
+    };
+
+    let currentPage = 1;
+    let reviewsPerPage = parseInt(reviewsPerPageSelect.value);
+    let sortDirection = {
+      date: "desc",
+      rating: "desc",
+      helpfulness: "desc"
+    };
+
+    const sortButtons = {
+      date: document.getElementById("sort-date"),
+      rating: document.getElementById("sort-rating"),
+      helpfulness: document.getElementById("sort-helpfulness")
+    };
+
+    function displayPage(page) {
+      const reviewCards = Array.from(document.querySelectorAll(".review-card"));
+      const totalPages = Math.ceil(reviewCards.length / reviewsPerPage);
+      if (page < 1) page = 1;
+      if (page > totalPages) page = totalPages;
+      currentPage = page;
+
+      const start = (page - 1) * reviewsPerPage;
+      const end = start + reviewsPerPage;
+
+      reviewCards.forEach((card, index) => {
+        card.style.display = index >= start && index < end ? "block" : "none";
+      });
+
+      renderPageNumbers(totalPages);
+    }
+
+    function renderPageNumbers(totalPages) {
+      paginationBtns.numbers.innerHTML = "";
+      for (let i = 1; i <= totalPages; i++) {
+        const btn = document.createElement("button");
+        btn.className = "pagination-btn";
+        btn.textContent = i;
+        if (i === currentPage) btn.disabled = true;
+        btn.addEventListener("click", () => displayPage(i));
+        paginationBtns.numbers.appendChild(btn);
+      }
+    }
+
+    function sortReviews(type) {
+      const reviews = Array.from(document.querySelectorAll(".review-card"));
+      const dir = sortDirection[type] === "asc" ? 1 : -1;
+
+      reviews.sort((a, b) => {
+        let aVal = a.dataset[type];
+        let bVal = b.dataset[type];
+
+        if (type === "date") {
+          aVal = new Date(aVal);
+          bVal = new Date(bVal);
+        } else {
+          aVal = parseInt(aVal, 10);
+          bVal = parseInt(bVal, 10);
+        }
+
+        return dir * (aVal > bVal ? 1 : aVal < bVal ? -1 : 0);
+      });
+
+      const container = document.getElementById("review-list");
+      container.innerHTML = "";
+      reviews.forEach(card => container.appendChild(card));
+
+      sortDirection[type] = sortDirection[type] === "asc" ? "desc" : "asc";
+      displayPage(1);  // reset to page 1 after sort
+    }
+
+    sortButtons.date.addEventListener("click", () => sortReviews("date"));
+    sortButtons.rating.addEventListener("click", () => sortReviews("rating"));
+    sortButtons.helpfulness.addEventListener("click", () => sortReviews("helpfulness"));
+
+    reviewsPerPageSelect.addEventListener("change", () => {
+      reviewsPerPage = parseInt(reviewsPerPageSelect.value);
+      displayPage(1);
+    });
+
+    paginationBtns.first.addEventListener("click", () => displayPage(1));
+    paginationBtns.prev.addEventListener("click", () => displayPage(currentPage - 1));
+    paginationBtns.next.addEventListener("click", () => displayPage(currentPage + 1));
+    paginationBtns.last.addEventListener("click", () => {
+      const totalPages = Math.ceil(document.querySelectorAll(".review-card").length / reviewsPerPage);
+      displayPage(totalPages);
+    });
+
+    displayPage(1);
+  });
+</script>
+
+  
 {% endblock %}

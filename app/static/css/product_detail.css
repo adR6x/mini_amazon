@@ -87,4 +87,89 @@
   form[style*="inline-block"] {
     margin-left: 0.25rem;
   }
-  
+
+/* Filters section */
+.filters {
+display: flex;
+justify-content: flex-end; /* Aligns the filters to the right */
+gap: 20px;
+align-items: center;
+margin-top: -35px;
+margin-bottom: 30px;
+}
+
+/* Individual filter buttons */
+.filters button {
+padding: 4px 6px;
+font-size: 0.9em;
+border: 1px solid #ccc;
+cursor: pointer;
+border-radius: 5px;
+background: #f0f0f0;
+}
+
+/* Products per page dropdown container */
+.page-controls {
+    display: flex;
+    justify-content: left;  /* Left align the 'Products per page' */
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.page-controls label {
+    font-size: 1em;
+}
+
+/* Products per page dropdown */
+.page-controls select {
+    padding: 8px 12px;
+    font-size: 0.8em;  /* Match font size with sort buttons */
+    height: 35px;    /* Consistent height with sort buttons */
+    width: 60px;    /* Fixed width for 3-digit numbers */
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background-color: white;
+}
+
+.page-controls select:hover {
+    background-color: #f0f0f0;
+}
+
+/* Pagination controls container */
+.pagination-controls {
+    display: flex;
+    justify-content: center; /* Center-align the pagination buttons */
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* Pagination buttons */
+.pagination-btn {
+    padding: 4px 6px;
+    font-size: 0.9em; /* Matching font size with the price and review sort buttons */
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+/* Hover effect for pagination buttons */
+.pagination-btn:hover {
+    background-color: #ddd;
+}
+
+/* Disabled pagination buttons */
+.pagination-btn:disabled {
+    background-color: #e0e0e0;
+    cursor: not-allowed;
+}
+
+
+/* Pagination numbers container */
+#page-numbers {
+    font-size: 0.9em; /* Matching font size */
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
