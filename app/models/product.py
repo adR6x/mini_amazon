@@ -121,36 +121,55 @@ LIMIT :most_exp
         return [Product(*row) for row in rows]
 
     @staticmethod
-    def get_filtered_all(review, min_price, max_price, most_exp):
-        rows = app.db.execute('''
-SELECT
-  p.product_id   AS id,
-  p.name,
-  p.price,
-  p.description,
-  p.image_url,
-  p.seller_id,
-  p.category_id,
-  COUNT(pr.review_id)      AS number_of_reviews,
-  COALESCE(AVG(pr.rating), 0) AS average_rating
-FROM Products p
-LEFT JOIN Product_Reviews pr
-  ON pr.product_id = p.product_id
-WHERE p.price BETWEEN :min_price AND :max_price
-GROUP BY
-  p.product_id, p.name, p.price,
-  p.description, p.image_url,
-  p.seller_id, p.category_id
-HAVING AVG(pr.rating) >= :review
-ORDER BY p.price DESC
-LIMIT :most_exp
-''',
-            review=review,
-            min_price=min_price,
-            max_price=max_price,
-            most_exp=most_exp
-        )
+    def get_filtered_all(review=None, min_price=None, max_price=None, most_exp=None, category_id=None):
+        base_query = '''
+        SELECT
+          p.product_id   AS id,
+          p.name,
+          p.price,
+          p.description,
+          p.image_url,
+          p.seller_id,
+          p.category_id,
+          COUNT(pr.review_id)      AS number_of_reviews,
+          COALESCE(AVG(pr.rating), 0) AS average_rating
+        FROM Products p
+        LEFT JOIN Product_Reviews pr
+          ON pr.product_id = p.product_id
+        WHERE 1=1
+        '''
+        params = {}
+        
+        if min_price is not None:
+            base_query += " AND p.price >= :min_price"
+            params['min_price'] = min_price
+        if max_price is not None:
+            base_query += " AND p.price <= :max_price"
+            params['max_price'] = max_price
+        if category_id:
+            base_query += " AND p.category_id = :category_id"
+            params['category_id'] = category_id
+
+        base_query += '''
+        GROUP BY
+          p.product_id, p.name, p.price,
+          p.description, p.image_url,
+          p.seller_id, p.category_id
+        '''
+
+        if review:
+            base_query += " HAVING AVG(pr.rating) >= :review"
+            params['review'] = review
+
+        base_query += " ORDER BY p.price DESC"
+
+        if most_exp:
+            base_query += " LIMIT :most_exp"
+            params['most_exp'] = most_exp
+
+        rows = app.db.execute(base_query, **params)
         return [Product(*row) for row in rows]
+
 
     @staticmethod
     def get_by_cat(category_id):

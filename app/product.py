@@ -14,6 +14,7 @@ bp = Blueprint('product', __name__)
 
 
 class FilterForm(FlaskForm):
+    
     review = SelectField(
         "Review Rating",
         choices=[('', "- Stars -"), ('1', "1 Star"), ('2', "2 Stars"),
@@ -36,7 +37,22 @@ class FilterForm(FlaskForm):
         validators=[Optional(), NumberRange(min=1)],
         default=None
     )
+    
+    category = SelectField(
+    "Category",
+    validators=[Optional()],
+    default=''
+    )
     submit = SubmitField("Apply Filters")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.category.choices = [('', "- Category -")] + [
+            (str(cat.id), cat.name) for cat in Category.get_unique()
+        ]
+    
+    submit = SubmitField("Apply Filters")
+    
 
 
 def form_validate(form):
@@ -44,13 +60,29 @@ def form_validate(form):
     min_price = form.min_price.data
     max_price = form.max_price.data
     most_exp = form.most_exp.data
+    category = form.category.data
 
-    if all(v is not None for v in [review, min_price, max_price, most_exp]):
-        return Product.get_filtered_all(review, min_price, max_price, most_exp)
-    elif most_exp is not None:
-        return Product.get_filtered_top_exp(most_exp)
-    else:
-        return Product.get_all_rnd5()
+    products = Product.get_filtered_all(review, min_price, max_price, most_exp, category)
+    page_heading = "🪄 Filtered Products"
+    return products, page_heading
+
+    # if all(v is not None for v in [review, min_price, max_price, most_exp, category]):
+    #     products = Product.get_filtered_all(review, min_price, max_price, most_exp, category)
+    #     page_heading = "🪄 Filtered Products"
+    #     return products, page_heading
+    # elif most_exp is not None:
+    #     products = Product.get_filtered_top_exp(most_exp)
+    #     page_heading = f"🪄 Top {most_exp} Most Expensive Products"
+    #     return products, page_heading
+    # elif category is not None:
+    #     products = Product.get_by_cat(category)
+    #     categories = [cat for cat in Category.get_unique()]
+    #     selected = next((cat for cat in categories if str(cat.id) == category), None)
+    #     page_heading = f"🪄 Category: {selected.name}" if selected else "Category: Unknown"
+    #     return products, page_heading
+    
+    # else:
+    #     return Product.get_all_rnd5()
 
 
 class SearchForm(FlaskForm):
@@ -75,13 +107,16 @@ def product_all():
     products = Product.get_all_rnd5()
     page_heading = "All Products 🛍️"
 
-    filter_form = FilterForm()
-    if filter_form.validate_on_submit():
-        products = form_validate(filter_form)
+    filter_form = FilterForm(prefix="filter")
+    search_form = SearchForm(prefix="search")
+    
+    if request.method == 'POST':
+        if 'filter-submit' in request.form and filter_form.validate():
+            products, page_heading = form_validate(filter_form)
 
-    search_form = SearchForm()
-    if search_form.validate_on_submit():
-        products, page_heading = search_validate(search_form)
+        elif 'search-submit' in request.form and search_form.validate():
+            products, page_heading = search_validate(search_form)
+        
 
     return render_template(
         'product_all.html',
@@ -100,15 +135,17 @@ def by_category():
 
     unique_cat = Category.get_unique()
     products = Product.get_by_cat(category_id)
-    page_heading = "Category: " + category_name
+    page_heading = "🧭 Category: " + category_name
 
-    filter_form = FilterForm()
-    if filter_form.validate_on_submit():
-        products = form_validate(filter_form)
+    filter_form = FilterForm(prefix="filter")
+    search_form = SearchForm(prefix="search")
+    
+    if request.method == 'POST':
+        if 'filter-submit' in request.form and filter_form.validate():
+            products, page_heading = form_validate(filter_form)
 
-    search_form = SearchForm()
-    if search_form.validate_on_submit():
-        products, page_heading = search_validate(search_form)
+        elif 'search-submit' in request.form and search_form.validate():
+            products, page_heading = search_validate(search_form)
 
     return render_template(
         'product_all.html',
