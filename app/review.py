@@ -106,9 +106,14 @@ def delete_seller_review(seller_review_id):
 @bp.route('/seller/<int:seller_id>/create', methods=['GET', 'POST'])
 @login_required
 def create_seller_review(seller_id):
-    # Optionally: verify that the current user actually purchased from this seller
+    # 1) block GET if already reviewed
+    existing = SellerReview.get_by_user_and_seller(current_user.id, seller_id)
+    if existing:
+        flash('You’ve already submitted a review for this seller.', 'info')
+        return redirect(url_for('review.review_history_all', review_type='seller'))
+
     if request.method == 'POST':
-        # parse & validate
+        # parse & validate rating
         try:
             rating = int(request.form['rating'])
             if not 1 <= rating <= 5:
@@ -118,7 +123,7 @@ def create_seller_review(seller_id):
             return redirect(url_for('review.create_seller_review', seller_id=seller_id))
 
         review_text = request.form.get('review_text')
-        image_url   = request.form.get('image_url')  # optional
+        image_url   = request.form.get('image_url')
 
         # create and persist
         SellerReview.create(

@@ -137,3 +137,19 @@ class SellerReview:
         ''', seller_review_id=seller_review_id)
         return SellerReview(*rows[0]) if rows else None
 
+    @staticmethod
+    def get_by_user_and_seller(reviewer_id, seller_id):
+        """Return the existing review by this user for that seller, or None."""
+        rows = app.db.execute('''
+            SELECT
+                seller_review_id, seller_id, reviewer_id,
+                rating, review_text, image_url, created_at, updated_at
+            FROM Seller_Reviews
+            WHERE reviewer_id = :reviewer_id
+              AND seller_id   = :seller_id
+            ''',
+            reviewer_id=reviewer_id,
+            seller_id=seller_id
+        )
+        return SellerReview(*rows[0]) if rows else None
+
