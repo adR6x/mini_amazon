@@ -66,24 +66,6 @@ def form_validate(form):
     page_heading = "🪄 Filtered Products"
     return products, page_heading
 
-    # if all(v is not None for v in [review, min_price, max_price, most_exp, category]):
-    #     products = Product.get_filtered_all(review, min_price, max_price, most_exp, category)
-    #     page_heading = "🪄 Filtered Products"
-    #     return products, page_heading
-    # elif most_exp is not None:
-    #     products = Product.get_filtered_top_exp(most_exp)
-    #     page_heading = f"🪄 Top {most_exp} Most Expensive Products"
-    #     return products, page_heading
-    # elif category is not None:
-    #     products = Product.get_by_cat(category)
-    #     categories = [cat for cat in Category.get_unique()]
-    #     selected = next((cat for cat in categories if str(cat.id) == category), None)
-    #     page_heading = f"🪄 Category: {selected.name}" if selected else "Category: Unknown"
-    #     return products, page_heading
-    
-    # else:
-    #     return Product.get_all_rnd5()
-
 
 class SearchForm(FlaskForm):
     query = StringField("Search", validators=[Optional()])

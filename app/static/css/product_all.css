@@ -108,7 +108,7 @@ main {
     display: flex;
     gap: 10px;
     margin-bottom: 20px;
-    justify-content: flex-end;
+    justify-content: space-between;  /* Adjusted to space between items */
     align-items: center;
 }
 
@@ -131,7 +131,6 @@ main {
 .product-list {
     min-height: calc(100vh - 200px); /* subtract header/footer height estimate */
 }
-
 
 .product {
     display: flex;
@@ -185,17 +184,18 @@ main {
     font-size: 0.9rem;
     color: #666;
 }
+
 .rating {
     display: flex;
     align-items: center;
     gap: 6px;           /* space between stars and count */
     margin: 8px 0;      /* vertical spacing if desired */
-  }
-  
-  .rating_stars,
-  .total_rating {
+}
+
+.rating_stars,
+.total_rating {
     margin: 0;          /* reset default p/spans if any */
-  }  
+}  
 
 .unit-price {
     color: gray;
@@ -263,4 +263,92 @@ main {
 
 .btn-primary:hover {
     background-color: #0056b3;
+}
+/* Sort buttons container */
+.sort-buttons {
+    display: flex;
+    justify-content: flex-end;  /* Right align the sort buttons */
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+/* Sorting dropdowns (Price, Review) */
+.sort-buttons select {
+    padding: 8px 12px;
+    font-size: 1em;  /* Ensure font size matches other elements */
+    height: 35px;    /* Consistent height with products per page */
+    width: 160px;    /* Ensure consistent width with products per page */
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background-color: white;
+}
+
+.sort-buttons select:hover {
+    background-color: #f0f0f0;
+}
+
+/* Products per page dropdown container */
+.page-controls {
+    display: flex;
+    justify-content: left;  /* Left align the 'Products per page' */
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.page-controls label {
+    font-size: 1em;
+}
+
+/* Products per page dropdown */
+.page-controls select {
+    padding: 8px 12px;
+    font-size: 0.8em;  /* Match font size with sort buttons */
+    height: 35px;    /* Consistent height with sort buttons */
+    width: 60px;    /* Fixed width for 3-digit numbers */
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background-color: white;
+}
+
+.page-controls select:hover {
+    background-color: #f0f0f0;
+}
+
+/* Pagination controls container */
+.pagination-controls {
+    display: flex;
+    justify-content: center; /* Center-align the pagination buttons */
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* Pagination buttons */
+.pagination-btn {
+    padding: 8px 16px; /* Adjust padding to match sort buttons' height */
+    font-size: 0.9em; /* Matching font size with the price and review sort buttons */
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+/* Hover effect for pagination buttons */
+.pagination-btn:hover {
+    background-color: #ddd;
+}
+
+/* Disabled pagination buttons */
+.pagination-btn:disabled {
+    background-color: #e0e0e0;
+    cursor: not-allowed;
+}
+
+
+/* Pagination numbers container */
+#page-numbers {
+    font-size: 0.9em; /* Matching font size */
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }

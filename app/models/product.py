@@ -91,33 +91,7 @@ GROUP BY
   p.description, p.image_url,
   p.seller_id, p.category_id
 ORDER BY RANDOM()
-LIMIT 5
 ''')
-        return [Product(*row) for row in rows]
-
-    @staticmethod
-    def get_filtered_top_exp(most_exp):
-        rows = app.db.execute('''
-SELECT
-  p.product_id   AS id,
-  p.name,
-  p.price,
-  p.description,
-  p.image_url,
-  p.seller_id,
-  p.category_id,
-  COUNT(pr.review_id)      AS number_of_reviews,
-  COALESCE(AVG(pr.rating), 0) AS average_rating
-FROM Products p
-LEFT JOIN Product_Reviews pr
-  ON pr.product_id = p.product_id
-GROUP BY
-  p.product_id, p.name, p.price,
-  p.description, p.image_url,
-  p.seller_id, p.category_id
-ORDER BY p.price DESC
-LIMIT :most_exp
-''', most_exp=most_exp)
         return [Product(*row) for row in rows]
 
     @staticmethod
@@ -192,7 +166,6 @@ GROUP BY
   p.product_id, p.name, p.price,
   p.description, p.image_url,
   p.seller_id, p.category_id
-LIMIT 5
 ''', category_id=category_id)
         return [Product(*row) for row in rows]
 
@@ -242,7 +215,7 @@ LIMIT 5
             c.name        % :query OR
             c.description % :query
           ORDER BY rank DESC
-          LIMIT 5;
+          lIMIT 20  
           ''',
           query=str(query)
       )

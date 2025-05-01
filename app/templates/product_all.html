@@ -22,7 +22,7 @@
         {{ form.hidden_tag() }}
         <div class="form-group">
           <label for="category">{{ form.category.label }}</label>
-          {{ form.category(class="form-control", placeholder="Select Category") }}
+          {{ form.category(class="form-control", placeholder="Category") }}
         </div>
 
         <div class="form-group">
@@ -44,7 +44,8 @@
           <label for="most_exp">{{ form.most_exp.label }}</label>
           {{ form.most_exp(class="form-control", placeholder="Give a number!") }}
         </div>
-        <button name="filter-submit" type="submit" class="btn btn-primary">Apply Filters</button>
+
+        <div class="form-group">{{ form.submit(class="btn btn-primary") }}</div>
       </form>
     </aside>
     <main>
@@ -52,16 +53,26 @@
         <form method="POST" class="search-form">
           {{ search_form.hidden_tag() }}
           <div class="search-wrapper">
-            {{ search_form.query(class_="search-input", placeholder="Search all products...") }}
-            <!-- <button type="submit" class="search-button">🔍</button> -->
-            <button name="search-submit" type="submit" class="search-button">🔍</button>
+            {{ search_form.query(class="search-input", placeholder="Search all products...") }}
+            <button type="submit" name="search-submit" class="search-button">🔍</button>
           </div>
         </form>
       </div>            
       <div class="filters">
-        <button id="sort-price">Price ▲▼</button>
-        <button id="sort-review">Review ▲▼</button>
-      </div>
+        <div class="sort-buttons">  
+          <button id="sort-price">Price ▲▼</button>
+          <button id="sort-review">Review ▲▼</button>
+        </div>
+        <div class="page-controls">  
+          <label for="products-per-page">Products per page:</label>
+          <select id="products-per-page">
+            <option value="5" selected>5</option>
+            <option value="10">10</option>
+            <option value="15">15</option>
+            <option value="20">20</option>
+          </select>
+        </div>
+      </div>      
       
       <section id="product-container" class="product-list">
         <h2>{{page_heading}}</h2>
@@ -106,6 +117,13 @@
         </div>
         {% endfor %}
       </section>
+      <div class="pagination-controls">
+        <button id="first-page" class="pagination-btn">First</button>
+        <button id="prev-page" class="pagination-btn">Prev</button>
+        <span id="page-numbers"></span>
+        <button id="next-page" class="pagination-btn">Next</button>
+        <button id="last-page" class="pagination-btn">Last</button>
+      </div> 
     </main>
   </div>
 
@@ -134,24 +152,94 @@
           }
         });
       });
-
-      // Sorting
-      const container = document.getElementById("product-container");
+  
+      // Sorting and pagination
+      const productList = Array.from(document.querySelectorAll("#product-container .product"));
+      const container = document.querySelector("#product-container");
+      const pageNumbers = document.getElementById("page-numbers");
+  
+      let productsPerPage = 5;
+      let currentPage = 1;
       let priceAsc = true, reviewAsc = true;
-      function sortBy(key, asc) {
-        Array.from(container.querySelectorAll(".product"))
-          .sort((a, b) => {
-            const av = parseFloat(a.dataset[key]) || 0;
-            const bv = parseFloat(b.dataset[key]) || 0;
-            return asc ? av - bv : bv - av;
-          })
-          .forEach(el => container.appendChild(el));
+  
+      const totalPages = () => Math.ceil(productList.length / productsPerPage);
+  
+      function updateProductDisplay() {
+        const startIdx = (currentPage - 1) * productsPerPage;
+        const endIdx = currentPage * productsPerPage;
+  
+        productList.forEach(p => p.style.display = 'none');
+        productList.slice(startIdx, endIdx).forEach(p => p.style.display = 'block');
+  
+        pageNumbers.textContent = `Page ${currentPage} of ${totalPages()}`;
       }
-      document.getElementById("sort-price")
-        .addEventListener("click", () => { sortBy("price", priceAsc); priceAsc = !priceAsc; });
-      document.getElementById("sort-review")
-        .addEventListener("click", () => { sortBy("rating", reviewAsc); reviewAsc = !reviewAsc; });
+  
+      function sortBy(key, asc) {
+        productList.sort((a, b) => {
+          const av = parseFloat(a.dataset[key]) || 0;
+          const bv = parseFloat(b.dataset[key]) || 0;
+          return asc ? av - bv : bv - av;
+        });
+  
+        productList.forEach(p => container.appendChild(p));
+        currentPage = 1;
+        updateProductDisplay();
+      }
+  
+      // Sorting
+      document.getElementById("sort-price").addEventListener("click", () => {
+        sortBy("price", priceAsc);
+        priceAsc = !priceAsc;
+      });
+  
+      document.getElementById("sort-review").addEventListener("click", () => {
+        sortBy("rating", reviewAsc);
+        reviewAsc = !reviewAsc;
+      });
+  
+      // Pagination
+      document.getElementById("first-page").addEventListener("click", () => {
+        currentPage = 1;
+        updateProductDisplay();
+      });
+  
+      document.getElementById("prev-page").addEventListener("click", () => {
+        if (currentPage > 1) {
+          currentPage--;
+          updateProductDisplay();
+        }
+      });
+  
+      document.getElementById("next-page").addEventListener("click", () => {
+        if (currentPage < totalPages()) {
+          currentPage++;
+          updateProductDisplay();
+        }
+      });
+  
+      document.getElementById("last-page").addEventListener("click", () => {
+        currentPage = totalPages();
+        updateProductDisplay();
+      });
+  
+      // Per page selector
+      const perPageSelect = document.getElementById("products-per-page");
+
+      if (perPageSelect) {
+        productsPerPage = parseInt(perPageSelect.value) || 10;
+
+        perPageSelect.addEventListener("change", () => {
+          productsPerPage = parseInt(perPageSelect.value);
+          currentPage = 1;
+          updateProductDisplay();
+        });
+      }
+
+      // Init
+      updateProductDisplay();
+
     });
-  </script>
+  </script>  
+  
 </body>
 {% endblock %}
