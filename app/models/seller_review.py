@@ -152,4 +152,16 @@ class SellerReview:
             seller_id=seller_id
         )
         return SellerReview(*rows[0]) if rows else None
+    
+    @staticmethod
+    def get_by_seller(seller_id):
+        rows = app.db.execute('''
+            SELECT seller_review_id, seller_id, reviewer_id,
+                   rating, review_text, image_url,
+                   created_at, updated_at
+            FROM Seller_Reviews
+            WHERE seller_id = :seller_id
+            ORDER BY created_at DESC
+        ''', seller_id=seller_id)
+        return [SellerReview(*r) for r in rows]
 
