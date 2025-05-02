@@ -2,6 +2,7 @@ from flask import current_app as app
 from datetime import datetime
 
 from flask import current_app as app
+from sqlalchemy.exc import IntegrityError
 
 class SellerReview:
     def __init__(self, seller_review_id, seller_id, reviewer_id, rating, review_text, image_url, created_at, updated_at, seller_name=None):
@@ -59,17 +60,43 @@ class SellerReview:
 
 
     @staticmethod
+    def _sync_review_seq():
+        # adjust sequence name if yours is different
+        app.db.execute("""
+            SELECT setval(
+                pg_get_serial_sequence('Seller_Reviews','seller_review_id'),
+                COALESCE(MAX(seller_review_id), 1)
+            ) FROM Seller_Reviews
+        """)
+
+    @staticmethod
     def create(seller_id, reviewer_id, rating, review_text=None, image_url=None):
-        rows = app.db.execute('''
-            INSERT INTO Seller_Reviews (seller_id, reviewer_id, rating, review_text, image_url)
-            VALUES (:seller_id, :reviewer_id, :rating, :review_text, :image_url)
-            RETURNING seller_review_id, seller_id, reviewer_id, rating, review_text, image_url, created_at, updated_at
-        ''',
-        seller_id=seller_id,
-        reviewer_id=reviewer_id,
-        rating=rating,
-        review_text=review_text,
-        image_url=image_url)
+        insert_sql = """
+            INSERT INTO Seller_Reviews
+              (seller_id, reviewer_id, rating, review_text, image_url)
+            VALUES
+              (:seller_id, :reviewer_id, :rating, :review_text, :image_url)
+            RETURNING
+              seller_review_id, seller_id, reviewer_id,
+              rating, review_text, image_url, created_at, updated_at
+        """
+        params = {
+            "seller_id":   seller_id,
+            "reviewer_id": reviewer_id,
+            "rating":      rating,
+            "review_text": review_text,
+            "image_url":   image_url
+        }
+
+        # 1) bump the sequence to avoid conflicts
+        SellerReview._sync_review_seq()
+
+        try:
+            rows = app.db.execute(insert_sql, **params)
+        except IntegrityError:
+            # 2) if it still collides, sync again and retry once
+            SellerReview._sync_review_seq()
+            rows = app.db.execute(insert_sql, **params)
 
         return SellerReview(*rows[0]) if rows else None
 
@@ -108,5 +135,21 @@ class SellerReview:
             JOIN Users u ON sr.seller_id = u.id
             WHERE sr.seller_review_id = :seller_review_id
         ''', seller_review_id=seller_review_id)
+        return SellerReview(*rows[0]) if rows else None
+
+    @staticmethod
+    def get_by_user_and_seller(reviewer_id, seller_id):
+        """Return the existing review by this user for that seller, or None."""
+        rows = app.db.execute('''
+            SELECT
+                seller_review_id, seller_id, reviewer_id,
+                rating, review_text, image_url, created_at, updated_at
+            FROM Seller_Reviews
+            WHERE reviewer_id = :reviewer_id
+              AND seller_id   = :seller_id
+            ''',
+            reviewer_id=reviewer_id,
+            seller_id=seller_id
+        )
         return SellerReview(*rows[0]) if rows else None
 

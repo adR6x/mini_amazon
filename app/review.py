@@ -101,3 +101,40 @@ def delete_seller_review(seller_review_id):
     SellerReview.delete(seller_review_id)
     flash('Seller review deleted.', 'warning')
     return redirect(url_for('review.review_history_all', review_type='seller'))
+
+
+@bp.route('/seller/<int:seller_id>/create', methods=['GET', 'POST'])
+@login_required
+def create_seller_review(seller_id):
+    # 1) block GET if already reviewed
+    existing = SellerReview.get_by_user_and_seller(current_user.id, seller_id)
+    if existing:
+        flash('You’ve already submitted a review for this seller.', 'info')
+        return redirect(url_for('review.review_history_all', review_type='seller'))
+
+    if request.method == 'POST':
+        # parse & validate rating
+        try:
+            rating = int(request.form['rating'])
+            if not 1 <= rating <= 5:
+                raise ValueError
+        except (KeyError, ValueError):
+            flash('Please provide a rating between 1 and 5.', 'danger')
+            return redirect(url_for('review.create_seller_review', seller_id=seller_id))
+
+        review_text = request.form.get('review_text')
+        image_url   = request.form.get('image_url')
+
+        # create and persist
+        SellerReview.create(
+            seller_id=seller_id,
+            reviewer_id=current_user.id,
+            rating=rating,
+            review_text=review_text,
+            image_url=image_url
+        )
+        flash('Seller review submitted.', 'success')
+        return redirect(url_for('review.review_history_all', review_type='seller'))
+
+    # GET → render blank form
+    return render_template('create_seller_review.html', seller_id=seller_id)
