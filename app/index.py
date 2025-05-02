@@ -1,4 +1,4 @@
-from flask import render_template
+from flask import render_template, redirect, url_for
 from flask_login import current_user
 import datetime
 
@@ -11,8 +11,4 @@ bp = Blueprint('index', __name__)
 
 @bp.route('/')
 def index():
-    # get all available products for sale:
-    products = Product.get_all()
-    # render the page by adding information to the index.html file
-    return render_template('index.html',
-                           avail_products=products)
+    return redirect(url_for('product.product_all'))
