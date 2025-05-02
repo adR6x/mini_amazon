@@ -65,7 +65,7 @@ class SellerReview:
         app.db.execute("""
             SELECT setval(
                 pg_get_serial_sequence('Seller_Reviews','seller_review_id'),
-                COALESCE(MAX(seller_review_id), 0)
+                COALESCE(MAX(seller_review_id), 1)
             ) FROM Seller_Reviews
         """)
 
