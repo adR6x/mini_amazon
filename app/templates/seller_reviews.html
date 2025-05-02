@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="container">
+    <h2>Reviews for Seller {{ seller_id }}</h2>
+    {% if reviews %}
+      <ul class="list-group">
+      {% for r in reviews %}
+        <li class="list-group-item">
+          <strong>{{ r.rating }}⭐</strong> by user #{{ r.reviewer_id }}
+          <p>{{ r.review_text or '— no comment —' }}</p>
+          {% if r.image_url %}
+            <img src="{{ r.image_url }}" class="img-fluid" />
+          {% endif %}
+          <small class="text-muted">{{ r.created_at }}</small>
+        </li>
+      {% endfor %}
+      </ul>
+    {% else %}
+      <div class="alert alert-info">No reviews yet.</div>
+    {% endif %}
+  </div>
+{% endblock %}

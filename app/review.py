@@ -138,3 +138,10 @@ def create_seller_review(seller_id):
 
     # GET → render blank form
     return render_template('create_seller_review.html', seller_id=seller_id)
+
+@bp.route('/seller/<int:seller_id>/reviews', methods=['GET'])
+def seller_reviews(seller_id):
+    reviews = SellerReview.get_by_seller(seller_id)
+    return render_template('seller_reviews.html',
+                           reviews=reviews,
+                           seller_id=seller_id)

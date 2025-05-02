@@ -16,7 +16,12 @@
       <div class="inventory-details mt-4">
         <h3>Seller Information</h3>
         <ul style="text-align: center; list-style: none; padding: 0;">
-          <li><strong>🧑‍🦲 </strong>{{ inventory.seller_fname }} {{ inventory.seller_lname }}</li>
+          <li>
+            <strong>🧑‍🦲 </strong>
+            <a href="{{ url_for('review.seller_reviews', seller_id=inventory.seller_id) }}">
+              {{ inventory.seller_fname }} {{ inventory.seller_lname }}
+            </a>
+          </li>          
           <li><strong>Rating:</strong> {{ inventory.seller_rating | round(2) }}
             <span class="rating_stars">
               {%- set rating = inventory.seller_rating|default(0) -%}
@@ -28,6 +33,7 @@
               {%- for _ in range(empty) -%}&#9734;{%- endfor -%}
             </span>
           </li>
+          <li><strong># Reviews: </strong>{{ inventory.num_ratings }}</li>
           <li><strong>📦 Available Quantity:</strong> {{ inventory.inventory_amount }}</li>
         </ul>
       </div>

@@ -255,13 +255,24 @@ ORDER BY name ASC
 
 
 class Inventory:
-    def __init__(self, id, seller_id, seller_fname, seller_lname, category_name, seller_rating, inventory_amount):
-        self.id = id
-        self.seller_id = seller_id
-        self.seller_fname = seller_fname
-        self.seller_lname = seller_lname
-        self.category_name = category_name
-        self.seller_rating = seller_rating
+    def __init__(
+        self,
+        id,
+        seller_id,           # ← now in the ctor
+        seller_fname,
+        seller_lname,
+        category_name,
+        seller_rating,
+        num_ratings,
+        inventory_amount
+    ):
+        self.id               = id
+        self.seller_id        = seller_id
+        self.seller_fname     = seller_fname
+        self.seller_lname     = seller_lname
+        self.category_name    = category_name
+        self.seller_rating    = seller_rating
+        self.num_ratings      = num_ratings
         self.inventory_amount = inventory_amount
 
     @staticmethod
@@ -269,21 +280,27 @@ class Inventory:
         row = app.db.execute('''
         SELECT 
             p.product_id, 
-            p.seller_id, 
+            p.seller_id,            -- include seller_id
             u.firstname, 
             u.lastname, 
-            c.name AS category_name, 
-            AVG(sr.rating) AS avg_rating, 
+            c.name           AS category_name, 
+            AVG(sr.rating)   AS avg_rating, 
+            COUNT(sr.rating) AS num_ratings, 
             i.quantity_available
         FROM products p
-        JOIN users u ON p.seller_id = u.id
-        JOIN categories c ON p.category_id = c.category_id
-        JOIN seller_reviews sr ON p.seller_id = sr.seller_id
-        JOIN inventory i ON p.product_id = i.product_id AND p.seller_id = i.seller_id
+        JOIN users u 
+          ON p.seller_id = u.id
+        JOIN categories c 
+          ON p.category_id = c.category_id
+        JOIN seller_reviews sr 
+          ON p.seller_id = sr.seller_id
+        JOIN inventory i 
+          ON p.product_id = i.product_id 
+         AND p.seller_id   = i.seller_id
         WHERE p.product_id = :id
         GROUP BY 
             p.product_id, 
-            p.seller_id, 
+            p.seller_id,         -- group by seller_id
             u.firstname, 
             u.lastname, 
             c.name, 
@@ -293,13 +310,16 @@ class Inventory:
         if not row:
             return None
 
-        row = row[0]
+        # unpack including seller_id
+        product_id, seller_id, fname, lname, category, avg_rating, num_ratings, qty = row[0]
+
         return Inventory(
-            id=row[0],
-            seller_id=row[1],
-            seller_fname=row[2],
-            seller_lname=row[3],
-            category_name=row[4],
-            seller_rating=row[5],
-            inventory_amount=row[6]
+            id=product_id,
+            seller_id=seller_id,       # pass seller_id into Inventory
+            seller_fname=fname,
+            seller_lname=lname,
+            category_name=category,
+            seller_rating=avg_rating,
+            num_ratings=num_ratings,
+            inventory_amount=qty
         )
