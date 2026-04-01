@@ -1,225 +1,76 @@
-# Mini Amazon — Final Project Report
+# Mini Amazon
+## Final Project Report
 
-**Course:** CS 516 — Database Systems, Duke University  
+**Course:** CS 516 - Database Systems, Duke University  
 **Repository:** [github.com/adR6x/mini_amazon](https://github.com/adR6x/mini_amazon)
 
----
+Mini Amazon is a full-stack e-commerce platform built for Duke's CS 516 final project. It models a realistic online marketplace in which the same user can act as both buyer and seller. The project centers on relational schema design, transactional checkout, database-driven business rules, and efficient product search in PostgreSQL.
 
-## Overview
-
-Mini Amazon is a full-stack e-commerce web application modeled after Amazon, built as the final project for CS 516 (Database Systems) at Duke University. The application supports multi-role interactions — users can browse products as customers, list and manage products as sellers, and leave reviews for both products and sellers. The project emphasizes relational database design, transactional integrity, and query optimization using PostgreSQL.
-
-**Technology Stack**
+### Technology Stack
 - **Backend:** Python 3, Flask
 - **Database:** PostgreSQL
-- **ORM/Query Layer:** SQLAlchemy (raw SQL via a thin db wrapper)
+- **Query Layer:** SQLAlchemy with thin raw-SQL wrappers
 - **Frontend:** Jinja2 templates, Bootstrap 5
-- **Auth:** Flask-Login, Werkzeug password hashing (bcrypt)
+- **Authentication:** Flask-Login and Werkzeug password hashing
 
----
+### Team Contributors
+- **Anubhav Dhakal (`ad641`)** - Full-stack development; major work on buyer-side UI, products, cart, reviews, and security
+- **Da Lin (`dl402`)** - Inventory management and seller dashboard
+- **Jun Yang** - Orders, fulfillment flow, and revenue trends
+- **Mirsaid Ravilov (`mr563`)** - Cart, checkout, and coupons
+- **Tianze Ren (`tr158`)** - Order fulfillment
+- **Malika Syzdykova (`ms1254`)** - User profiles and seller reviews
 
-## Team Contributors
+> The original course skeleton was created by Rickard Stureborg and Yihao Hu and later updated by course staff.
 
-| Name | GitHub / NetID | Role |
-|---|---|---|
-| Anubhav Dhakal | adR6 / ad641 | Full-stack (top contributor — products, reviews, security, cart) |
-| Da Lin | dl402 | Inventory management, seller dashboard |
-| Jun Yang | — | Orders, fulfillment, revenue trends |
-| Mirsaid Ravilov | mr563 | Cart, checkout, coupons |
-| Tianze Ren | tr158 | Order fulfillment, UI improvements |
-| Malika Syzdykova | ms1254 | User profiles, seller reviews |
+### Database Design
+The PostgreSQL database contains **12 tables** that cover the complete marketplace workflow:
 
-> The project skeleton was originally created by Rickard Stureborg and Yihao Hu for the Fall 2021 semester and has been amended by course staff in subsequent years.
+- **User and catalog data:** `Users`, `Categories`, `Products`, `Inventory`
+- **Shopping flow:** `Carts`, `Cart_Items`, `Orders`, `Order_Items`, `Coupons`
+- **Feedback and engagement:** `Product_Reviews`, `Seller_Reviews`, `Product_Review_Upvotes`
 
----
+Key design choices:
 
-## Database Schema
+- **Single `Users` table:** buyers and sellers share one identity model, which reduces duplication and simplifies joins
+- **`Inventory` as a seller-product bridge:** multiple sellers can offer the same product with different prices and stock levels
+- **One-cart-per-user rule:** enforced with a unique constraint on `Carts.user_id`
+- **Review integrity:** one product review per `(reviewer_id, product_id)` and one seller review per `(reviewer_id, seller_id)`
+- **Coupon integrity:** discount codes are globally unique
+- **Upvote cleanup:** product review upvotes cascade on delete so dependent rows are removed automatically
 
-The application uses a PostgreSQL database (`amazon`) with 12 tables designed to capture the full lifecycle of an e-commerce platform.
+The schema also uses two triggers to keep pricing synchronized:
 
-### Entity-Relationship Summary
+- **`update_products_price_trigger`:** when an inventory price changes, the corresponding `Products.price` is updated
+- **`update_cart_items_price_trigger`:** when a product price changes, related `Cart_Items.unit_price` values are refreshed
 
-```
-Users ──< Products (seller_id)
-Users ──< Carts (user_id)
-Carts ──< Cart_Items >── Products
-Cart_Items >── Users (seller_id)
-Users ──< Orders (buyer_id)
-Orders ──< Order_Items >── Products
-Order_Items >── Users (seller_id)
-Products >── Categories
-Products ──< Inventory >── Users (seller_id)
-Products ──< Product_Reviews >── Users (reviewer_id)
-Users ──< Seller_Reviews >── Users (reviewer_id / seller_id)
-Users ──< Coupons (seller_id)
-Product_Reviews ──< Product_Review_Upvotes >── Users
-```
+### Core Features
+- **Authentication and profiles:** secure registration/login, editable user profiles, wallet balance updates, and public seller pages with ratings and review history
+- **Product discovery:** paginated browsing plus filtering by category, price, and minimum rating
+- **Fuzzy search:** PostgreSQL `pg_trgm` similarity search across product, seller, and category fields for typo-tolerant results
+- **Cart workflow:** users can add items, update quantities, remove items, or save products for later
+- **Transactional checkout:** order creation, inventory decrement, buyer debit, seller credit, and order-item insertion all happen in one transaction
+- **Coupon support:** seller-issued coupons apply discounts at checkout and are capped by each seller's subtotal
+- **Order management:** buyers can view order history; sellers can fulfill line items and automatically update overall order status
+- **Inventory tools:** sellers can create listings, edit product details, adjust stock, and filter inventory by keyword or metadata
+- **Review system:** buyers can create, edit, and delete product and seller reviews; product reviews also support upvotes
+- **Analytics:** sellers can view revenue trends over time
 
-### Table Descriptions
+### Security and Reliability
+- Parameterized queries are used throughout to prevent SQL injection
+- Input validation covers email format, field lengths, and general sanitization
+- Security headers include `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, and a Content Security Policy
+- Request logging captures HTTP method, URL, and remote IP for debugging and monitoring
 
-#### `Users`
-Central identity table. Every actor (buyer, seller, or both) is a `User`.
+### Application Structure
+- **Routes:** `app/users.py`, `app/product.py`, `app/cart.py`, `app/review.py`, `app/inventory_routes.py`
+- **Models:** separate modules for users, products, carts, inventory, purchases, and reviews under `app/models/`
+- **Database scripts:** schema and sample-data setup live in `db/create.sql`, `db/load.sql`, and `db/setup.sh`
+- **Entry point:** `amazon.py`
 
-| Column | Type | Notes |
-|---|---|---|
-| id | INT (PK, identity) | Auto-generated primary key |
-| email | VARCHAR (UNIQUE) | Login credential |
-| password | VARCHAR(255) | bcrypt hashed |
-| firstname / lastname | VARCHAR(255) | Display name |
-| address | VARCHAR(255) | Shipping address |
-| balance | NUMERIC(10,2) | Wallet balance — used for purchases |
-
-#### `Categories`
-Flat product category taxonomy.
-
-| Column | Type | Notes |
-|---|---|---|
-| category_id | INT (PK) | |
-| name | VARCHAR(255) | Category label |
-| description | TEXT | Optional description |
-
-#### `Products`
-Listings created by sellers. Each product belongs to one seller and one category.
-
-| Column | Type | Notes |
-|---|---|---|
-| product_id | INT (PK) | |
-| seller_id | INT (FK → Users) | The seller who listed this product |
-| category_id | INT (FK → Categories) | |
-| name | VARCHAR(255) | |
-| description | TEXT | |
-| image_url | TEXT | |
-| price | DECIMAL(12,2) | Must be ≥ 0 |
-
-#### `Carts` and `Cart_Items`
-Each user has at most one cart (enforced by a UNIQUE constraint on `user_id`). Cart items support a "save for later" workflow.
-
-**Cart_Items notable columns:**
-- `status`: `in_cart` or `saved_for_later`
-- `unit_price`: snapshot of the price at the time of adding
-- `seller_id`: tracks which seller's inventory to decrement at checkout
-
-#### `Orders` and `Order_Items`
-Created atomically during checkout. An order has a top-level `fulfillment_status` (`pending`, `partial`, `fulfilled`) that is recomputed whenever a seller marks one of its items fulfilled.
-
-**Order_Items notable columns:**
-- `fulfillment_status`: per-item status (`pending` or `fulfilled`)
-- `fulfilled_at`: timestamp set when the item is fulfilled
-
-#### `Inventory`
-A separate table that tracks how many units each seller has available for each product, along with the seller-specific price. A unique constraint on `(seller_id, product_id)` ensures no duplicate entries.
-
-#### `Product_Reviews`
-Buyers can leave one review per product (enforced by `UNIQUE (reviewer_id, product_id)`). Supports 1–5 star ratings, text, and an optional image.
-
-#### `Seller_Reviews`
-Buyers can leave one review per seller (enforced by `UNIQUE (reviewer_id, seller_id)`). Same structure as product reviews.
-
-#### `Product_Review_Upvotes`
-Tracks which users have upvoted which product reviews. Composite primary key `(review_id, user_id)` prevents duplicate votes. Cascades on delete so upvotes are cleaned up if a review is removed.
-
-#### `Coupons`
-Sellers can create discount codes with a fixed monetary value and an expiration date. Codes are globally unique (`UNIQUE (code)`).
-
----
-
-## Database Triggers
-
-Two PostgreSQL triggers maintain price consistency across tables:
-
-1. **`update_products_price_trigger`** — When a seller updates the price in `Inventory`, the corresponding `Products.price` is automatically updated.
-2. **`update_cart_items_price_trigger`** — When `Products.price` changes, all `Cart_Items` referencing that product have their `unit_price` updated to reflect the new price.
-
-This ensures that cart prices always reflect the current listed price without requiring application-level synchronization.
-
----
-
-## Features Implemented
-
-### Authentication & User Management
-- Secure registration and login using bcrypt password hashing
-- Profile editing: name, email, password, shipping address, wallet balance top-up
-- Public seller profile pages showing seller stats (total products, total sales, average rating) and reviews
-
-### Product Browsing & Search
-- Browse all products with pagination
-- Filter by category, price range, and minimum rating
-- Full-text fuzzy search using PostgreSQL's `pg_trgm` extension — searches across product name, description, seller name, seller address, and category name, ranked by trigram similarity
-
-### Cart & Checkout
-- Add items to cart (automatically creates a cart if one doesn't exist)
-- Update quantities, remove items, or save items for later
-- Checkout validates inventory availability and buyer wallet balance before committing
-- Checkout is executed in a single database transaction: creates the order, inserts order items, decrements inventory, credits each seller's balance, and debits the buyer's balance atomically
-- Coupon code support: sellers can issue discount codes; discounts are applied at checkout and capped at the seller's subtotal
-
-### Order Management
-- **Buyer view:** order history with filters (status, date range) and pagination
-- **Seller view:** incoming orders for their products, with the ability to mark individual items as `fulfilled`; the parent order's status updates automatically (`pending` → `partial` → `fulfilled`)
-
-### Inventory Management (Sellers)
-- Add new products and set initial inventory quantities and prices
-- Edit product details (name, description, image, category, price, quantity)
-- Delete products from inventory
-- Filter and sort inventory by price, quantity, category, or keyword search
-
-### Reviews
-- **Product reviews:** create, edit, delete; one review per buyer per product
-- **Seller reviews:** create, edit, delete; one review per buyer per seller
-- Upvote/remove upvote on product reviews
-- Review history pages for users showing all their reviews
-
-### Seller Analytics
-- Revenue trends dashboard showing sales data over time
-
-### Security
-- SQL injection prevention via parameterized queries throughout
-- Input sanitization and pattern validation (email format, length limits)
-- HTTP security headers on every response: `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, and a Content Security Policy
-- All requests are logged with method, URL, and remote IP
-
----
-
-## Application Structure
-
-```
-mini_amazon/
-├── app/
-│   ├── models/              # Database model classes (one per entity)
-│   │   ├── user.py
-│   │   ├── product.py       # Product + Category + Inventory (detail view)
-│   │   ├── carts.py         # Cart, CartItem, checkout logic
-│   │   ├── inventory.py     # Seller inventory CRUD
-│   │   ├── product_review.py
-│   │   ├── seller_review.py
-│   │   ├── purchase.py      # Order history & seller order queries
-│   │   └── wishlist.py
-│   ├── templates/           # Jinja2 HTML templates
-│   ├── users.py             # Auth, profile, order, coupon routes
-│   ├── product.py           # Product browsing & detail routes
-│   ├── cart.py              # Cart & checkout routes
-│   ├── review.py            # Product & seller review routes
-│   ├── inventory_routes.py  # Seller inventory routes
-│   ├── wishlist.py          # Wishlist routes
-│   └── security.py          # SecurityValidation, SQLInjectionPrevention, middleware
-├── db/
-│   ├── create.sql           # Schema definition
-│   ├── load.sql             # Sample data loader
-│   ├── setup.sh             # Database initialization script
-│   └── data/                # CSV seed data
-└── amazon.py                # Flask app entry point
-```
-
----
-
-## Key Design Decisions
-
-**Dual-role users:** Rather than separate `Buyer` and `Seller` tables, a single `Users` table handles both roles. A user is treated as a seller if they have entries in `Inventory`. This simplifies joins and avoids data duplication.
-
-**Inventory as a bridge table:** The `Inventory` table acts as a many-to-many bridge between sellers and products, allowing multiple sellers to offer the same product at different prices and quantities.
-
-**Transactional checkout:** The entire checkout process runs inside a single `BEGIN`/`COMMIT` block, ensuring that partial failures (e.g., insufficient stock discovered mid-checkout) do not leave the database in an inconsistent state.
-
-**Snapshot pricing:** `Cart_Items.unit_price` captures the price at the time of adding to cart, while database triggers keep it synchronized with live price changes — matching the behavior of real e-commerce platforms.
-
-**Fuzzy search with pg_trgm:** Rather than simple `ILIKE` matching, the search feature uses PostgreSQL's trigram similarity scoring to return relevant results even for partial or misspelled queries, ranked by relevance.
+### Key Design Decisions
+- **Dual-role users:** treating buyers and sellers as the same entity makes the system easier to extend and keeps user data centralized
+- **Bridge-based inventory:** inventory is modeled independently from products so seller-specific pricing and stock are preserved cleanly
+- **Atomic checkout:** wrapping checkout in one database transaction prevents partial orders and inconsistent balances
+- **Snapshot pricing with synchronization:** cart items store a price snapshot, while triggers keep those values aligned with later listing changes
+- **Database-powered search:** trigram similarity produces stronger search quality than plain keyword matching for a marketplace UI
